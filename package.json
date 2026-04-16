@@ -9,13 +9,14 @@
     "start": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.3",
     "jspdf": "^2.5.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-helmet-async": "^3.0.0",
     "react-router-dom": "^6.20.0",
-    "zustand": "^5.0.3",
-    "web-vitals": "^3.5.0"
+    "web-vitals": "^3.5.0",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/react": "^19",

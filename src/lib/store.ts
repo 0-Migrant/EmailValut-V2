@@ -5,6 +5,7 @@ import type {
   Credential, Stock, HistoryEntry, Settings,
 } from './types';
 import { uid } from './utils';
+import { supabase, isSupabaseEnabled } from './supabase';
 
 // ─── State shape ──────────────────────────────────────────────────────────────
 
@@ -114,45 +115,55 @@ function pushHistory(
 
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
-const API_URL =
-  (import.meta.env.VITE_API_URL as string | undefined)?.trim() ||
-  process.env.REACT_APP_API_URL?.trim() ||
-  '';
-
-if (typeof window !== 'undefined') {
-  console.debug('[VaultStore] API_URL=', API_URL || '<none>', 'storage=', API_URL ? 'customServerStorage' : 'localStorage');
-}
-
-const customServerStorage: StateStorage = {
+const supabaseStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
-    if (typeof window === 'undefined') return null;
-    if (!API_URL) return null;
+    if (typeof window === 'undefined' || !supabase) return null;
     try {
-      const res = await fetch(`${API_URL}/api/vault`);
-      if (!res.ok) return null;
-      const data = await res.json();
-      return JSON.stringify({ state: data, version: 0 });
+      const { data, error } = await supabase
+        .from('vault')
+        .select('data')
+        .eq('id', 1)
+        .single();
+
+      if (error) {
+        if (error.code !== 'PGRST116') {
+          console.error('Supabase getItem error:', error);
+        }
+        return null;
+      }
+
+      return JSON.stringify({ state: data?.data ?? null, version: 0 });
     } catch (err) {
-      console.error('Failed to fetch vault data:', err);
+      console.error('Failed to fetch vault data from Supabase:', err);
       return null;
     }
   },
   setItem: async (name: string, value: string): Promise<void> => {
-    if (typeof window === 'undefined') return;
-    if (!API_URL) return;
+    if (typeof window === 'undefined' || !supabase) return;
     try {
       const { state } = JSON.parse(value);
-      await fetch(`${API_URL}/api/vault`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state),
-      });
+      const { error } = await supabase.from('vault').upsert({ id: 1, data: state });
+      if (error) {
+        console.error('Supabase setItem error:', error);
+      }
     } catch (err) {
-      console.error('Failed to save vault data:', err);
+      console.error('Failed to save vault data to Supabase:', err);
     }
   },
-  removeItem: async (): Promise<void> => {},
+  removeItem: async (): Promise<void> => {
+    if (typeof window === 'undefined' || !supabase) return;
+    try {
+      const { error } = await supabase.from('vault').delete().eq('id', 1);
+      if (error) console.error('Supabase removeItem error:', error);
+    } catch (err) {
+      console.error('Failed to remove vault data from Supabase:', err);
+    }
+  },
 };
+
+if (typeof window !== 'undefined') {
+  console.debug('[VaultStore] storage=', isSupabaseEnabled ? 'supabase' : 'localStorage');
+}
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -464,8 +475,8 @@ export const useVaultStore = create<VaultStore>()(
     {
       name: 'vault_state',
       storage: createJSONStorage(() => {
-        if (typeof window === 'undefined') return customServerStorage;
-        return API_URL ? customServerStorage : window.localStorage;
+        if (typeof window === 'undefined') return supabaseStorage;
+        return isSupabaseEnabled ? supabaseStorage : window.localStorage;
       }),
     },
   ),

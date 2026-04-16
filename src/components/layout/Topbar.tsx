@@ -30,7 +30,6 @@ export default function Topbar({ onMenuClick }: Props) {
         <span className="brand-name">Vault</span>
       </div>
       <div className="topbar-right">
-        <button className="hamburger-btn" onClick={onMenuClick} title="Menu">☰</button>
         <button className="theme-btn" onClick={toggleTheme} title="Toggle theme">
           {isDark ? '☀️' : '🌙'}
         </button>

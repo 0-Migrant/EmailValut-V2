@@ -114,12 +114,19 @@ function pushHistory(
 
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL =
+  (import.meta.env.VITE_API_URL as string | undefined)?.trim() ||
+  process.env.REACT_APP_API_URL?.trim() ||
+  '';
+
+if (typeof window !== 'undefined') {
+  console.debug('[VaultStore] API_URL=', API_URL || '<none>', 'storage=', API_URL ? 'customServerStorage' : 'localStorage');
+}
 
 const customServerStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
-    // We only want to fetch from the server if we are in the browser
     if (typeof window === 'undefined') return null;
+    if (!API_URL) return null;
     try {
       const res = await fetch(`${API_URL}/api/vault`);
       if (!res.ok) return null;
@@ -132,6 +139,7 @@ const customServerStorage: StateStorage = {
   },
   setItem: async (name: string, value: string): Promise<void> => {
     if (typeof window === 'undefined') return;
+    if (!API_URL) return;
     try {
       const { state } = JSON.parse(value);
       await fetch(`${API_URL}/api/vault`, {
@@ -455,7 +463,10 @@ export const useVaultStore = create<VaultStore>()(
     }),
     {
       name: 'vault_state',
-      storage: createJSONStorage(() => customServerStorage),
+      storage: createJSONStorage(() => {
+        if (typeof window === 'undefined') return customServerStorage;
+        return API_URL ? customServerStorage : window.localStorage;
+      }),
     },
   ),
 );

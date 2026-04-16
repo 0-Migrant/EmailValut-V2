@@ -1,53 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vault — Business Manager</title>
-  <link rel="stylesheet" href="./assets/css/vault.css?v=3">
-</head>
-<body>
-
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z"/>
-        </svg>
-      </div>
-      <span class="brand-name">Vault</span>
-    </div>
-    <div class="topbar-right">
-      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileSidebar()" title="Menu">☰</button>
-      <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
-    </div>
-  </div>
-
-  <div class="app-shell">
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-      <div class="sidebar-section">Dashboard</div>
-      <button class="nav-item active" onclick="navigate('dashboard')"><span class="ni">📊</span>Overview</button>
-
-      <div class="sidebar-section">Orders</div>
-      <button class="nav-item" onclick="navigate('new-order')"><span class="ni">➕</span>New Order</button>
-      <button class="nav-item" onclick="navigate('orders')"><span class="ni">📋</span>Manage Orders</button>
-      <button class="nav-item" onclick="navigate('analytics')"><span class="ni">📈</span>Analytics</button>
-
-      <div class="sidebar-section">Management</div>
-      <button class="nav-item" onclick="navigate('items')"><span class="ni">🛒</span>Items</button>
-      <button class="nav-item" onclick="navigate('delivery')"><span class="ni">🚚</span>Delivery Men</button>
-      <button class="nav-item" onclick="navigate('credentials')"><span class="ni">🔒</span>Credentials</button>
-
-      <div class="sidebar-section">System</div>
-      <button class="nav-item" onclick="navigate('history')"><span class="ni">🕐</span>History</button>
-      <button class="nav-item" onclick="navigate('settings')"><span class="ni">⚙️</span>Settings</button>
-    </div>
-
-    <!-- PAGE CONTENT -->
-    <div class="page-content" id="page-content"></div>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vault — Business Manager</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>
 
   <!-- MOBILE SIDEBAR OVERLAY -->
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileSidebar()"></div>

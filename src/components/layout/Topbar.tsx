@@ -1,4 +1,3 @@
-'use client';
 import { useVaultStore } from '@/lib/store';
 
 interface Props {

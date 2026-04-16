@@ -1,5 +1,4 @@
-'use client';
-import { usePathname, useRouter } from 'next/navigation';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 const NAV = [
@@ -22,11 +21,11 @@ interface Props {
 }
 
 export default function Sidebar({ mobileOpen, onClose }: Props) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   function go(href: string) {
-    router.push(href);
+    navigate(href);
     onClose();
   }
 
@@ -44,7 +43,7 @@ export default function Sidebar({ mobileOpen, onClose }: Props) {
             {NAV.filter((n) => n.section === section).map((n) => (
               <button
                 key={n.href}
-                className={`nav-item${pathname === n.href ? ' active' : ''}`}
+                className={`nav-item${location.pathname === n.href ? ' active' : ''}`}
                 onClick={() => go(n.href)}
               >
                 <span className="ni">{n.icon}</span>

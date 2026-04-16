@@ -1,4 +1,3 @@
-'use client';
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import type { ConfirmState, LoyaltyState } from '@/lib/types';
 

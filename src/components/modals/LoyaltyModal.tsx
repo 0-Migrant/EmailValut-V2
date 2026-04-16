@@ -1,4 +1,3 @@
-'use client';
 import { useModal } from '@/context/ModalContext';
 
 export default function LoyaltyModal() {

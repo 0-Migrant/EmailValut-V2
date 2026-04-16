@@ -1,4 +1,3 @@
-'use client';
 import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
@@ -115,23 +114,34 @@ function pushHistory(
 
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const customServerStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
     // We only want to fetch from the server if we are in the browser
     if (typeof window === 'undefined') return null;
-    const res = await fetch('/api/vault');
-    if (!res.ok) return null;
-    const data = await res.json();
-    return JSON.stringify({ state: data, version: 0 });
+    try {
+      const res = await fetch(`${API_URL}/api/vault`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return JSON.stringify({ state: data, version: 0 });
+    } catch (err) {
+      console.error('Failed to fetch vault data:', err);
+      return null;
+    }
   },
   setItem: async (name: string, value: string): Promise<void> => {
     if (typeof window === 'undefined') return;
-    const { state } = JSON.parse(value);
-    await fetch('/api/vault', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state),
-    });
+    try {
+      const { state } = JSON.parse(value);
+      await fetch(`${API_URL}/api/vault`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state),
+      });
+    } catch (err) {
+      console.error('Failed to save vault data:', err);
+    }
   },
   removeItem: async (): Promise<void> => {},
 };

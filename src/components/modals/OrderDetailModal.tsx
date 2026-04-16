@@ -1,4 +1,3 @@
-'use client';
 import { useModal } from '@/context/ModalContext';
 import { useVaultStore } from '@/lib/store';
 import { fmt, fmtDateTime, orderTotal, orderItemsTotal, getPriceInfo, statusBadgeClass } from '@/lib/utils';

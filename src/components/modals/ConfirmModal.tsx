@@ -5,8 +5,9 @@ export default function ConfirmModal() {
   if (!confirm.open) return null;
 
   function handleOk() {
-    closeConfirm();
     confirm.onConfirm?.();
+    console.debug('[ConfirmModal] confirmed action', confirm.title);
+    closeConfirm();
   }
 
   return (

@@ -98,7 +98,7 @@ export default function OrderDetailModal() {
         </div>
 
         <div className="modal-actions">
-          <button className="btn btn-primary btn-sm" onClick={() => generateOrderPDF(order!, items, dm, showUnitPrice)}>
+          <button className="btn btn-primary btn-sm" onClick={() => void generateOrderPDF(order!, items, dm, showUnitPrice)}>
             📥 Download PDF
           </button>
           {order.status === 'waiting' && <>

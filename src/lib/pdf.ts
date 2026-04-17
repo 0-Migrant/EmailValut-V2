@@ -2,8 +2,23 @@ import { jsPDF } from 'jspdf';
 import { Order, Item, DeliveryMan, Credential } from './types';
 import { fmt, fmtDateTime, orderTotal, getPriceInfo } from './utils';
 
-export function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan, showUnitPrice = true) {
+async function loadLogoBase64(): Promise<string | null> {
+  try {
+    const res = await fetch('/logo.png');
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan, showUnitPrice = true) {
   const doc = new jsPDF();
+  const logo = await loadLogoBase64();
   const info = getPriceInfo(order);
 
   // Modern color palette
@@ -16,16 +31,20 @@ export function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan, 
   doc.setFillColor(primary[0], primary[1], primary[2]);
   doc.rect(0, 0, 210, 35, 'F');
 
-  // Header - Company Name & Tagline
-  doc.setFontSize(28);
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Instant-Play SHOP', 105, 15, { align: 'center' });
-  
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(200, 220, 255);
-  doc.text('Professional Order Management', 105, 25, { align: 'center' });
+  // Header - Logo or Company Name & Tagline
+  if (logo) {
+    doc.addImage(logo, 'PNG', 80, 4, 50, 27);
+  } else {
+    doc.setFontSize(28);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Instant-Play SHOP', 105, 15, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(200, 220, 255);
+    doc.text('Professional Order Management', 105, 25, { align: 'center' });
+  }
 
   // Invoice title
   doc.setFontSize(12);

@@ -11,6 +11,7 @@ export default function NewOrder() {
   const storeItems  = useVaultStore((s) => s.items);
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
   const orders      = useVaultStore((s) => s.orders);
+  const bundles     = useVaultStore((s) => s.bundles);
   const addOrder    = useVaultStore((s) => s.addOrder);
 
   const [dmId,        setDmId]        = useState('');
@@ -47,6 +48,26 @@ export default function NewOrder() {
 
   function removeItem(itemId: string) {
     setOrderItems((prev) => prev.filter((oi) => oi.itemId !== itemId));
+  }
+
+  function addBundleToOrder(bundleId: string) {
+    if (!bundleId) return;
+    const bundle = bundles.find((b) => b.id === bundleId);
+    if (!bundle) return;
+    setOrderItems((prev) => {
+      let next = [...prev];
+      bundle.items.forEach((bi) => {
+        const item = storeItems.find((i) => i.id === bi.itemId);
+        if (!item) return;
+        const ex = next.find((oi) => oi.itemId === bi.itemId);
+        if (ex) {
+          next = next.map((oi) => oi.itemId === bi.itemId ? { ...oi, qty: oi.qty + bi.qty } : oi);
+        } else {
+          next = [...next, { itemId: bi.itemId, qty: bi.qty, price: item.price }];
+        }
+      });
+      return next;
+    });
   }
 
   function submit() {
@@ -115,7 +136,7 @@ export default function NewOrder() {
             }
           </div>
 
-          <div style={{ marginBottom:12 }}>
+          <div style={{ marginBottom: 8 }}>
             <select className="inp" style={{ width:'100%' }} value="" onChange={(e) => { addItem(e.target.value); e.target.value=''; }}>
               <option value="">+ Add item to order...</option>
               {cats.map((cat) => (
@@ -127,6 +148,17 @@ export default function NewOrder() {
               ))}
             </select>
           </div>
+
+          {bundles.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <select className="inp" style={{ width:'100%' }} value="" onChange={(e) => { addBundleToOrder(e.target.value); e.target.value=''; }}>
+                <option value="">📦 Add bundle to order...</option>
+                {bundles.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name} ({b.items.length} items)</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <hr className="divider" />
 

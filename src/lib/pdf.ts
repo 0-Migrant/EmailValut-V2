@@ -208,7 +208,7 @@ export function generateCredentialsPDF(credentials: Credential[]) {
   // Header
   doc.setFontSize(22);
   doc.setTextColor(accent[0], accent[1], accent[2]);
-  doc.text('Vault Business Manager', 105, 20, { align: 'center' });
+  doc.text('Instant-Play', 105, 20, { align: 'center' });
   
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
@@ -256,7 +256,7 @@ export function generateCredentialsPDF(credentials: Credential[]) {
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
   doc.setFont('helvetica', 'normal');
-  doc.text('Credentials exported from Vault Business Manager', 105, 285, { align: 'center' });
+  doc.text('Credentials exported from Instant-Play', 105, 285, { align: 'center' });
 
   doc.save(`Credentials_Export_${new Date().toISOString().slice(0, 10)}.pdf`);
 }

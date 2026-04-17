@@ -48,7 +48,7 @@ function App() {
   return (
     <Router>
       <Helmet>
-        <title>EmailVault - Vault Manager</title>
+        <title>Instant-Play</title>
         <meta name="description" content="Secure email credentials and order management system" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Helmet>

@@ -15,7 +15,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `vault_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `instant-play_backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -43,7 +43,7 @@ export default function Settings() {
       'This will DELETE EVERYTHING (Orders, Items, Credentials, Settings). This cannot be undone. Are you absolutely sure?',
       () => {
         nukeAll();
-        alert('✅ Vault has been reset.');
+        alert('✅ Instant-Play has been reset.');
       }
     );
   }

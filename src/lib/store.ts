@@ -55,6 +55,7 @@ interface AppActions {
   addStock: (credId: string, stock: Omit<Stock, 'id'>) => void;
   updateStock: (credId: string, stockId: string, data: Partial<Omit<Stock, 'id'>>) => void;
   deleteStock: (credId: string, stockId: string) => void;
+  consumeStock: (credId: string, stockId: string, qty: number) => void;
 
   // History
   deleteHistoryEntry: (id: string) => void;
@@ -372,6 +373,16 @@ export const useVaultStore = create<VaultStore>()(
             history: pushHistory(s, 'del', `Removed stock`),
           };
         });
+      },
+      consumeStock(credId, stockId, qty) {
+        set((s) => ({
+          credentials: s.credentials.map((c) =>
+            c.id === credId
+              ? { ...c, stocks: c.stocks.map((stk) => stk.id === stockId ? { ...stk, qty: Math.max(0, stk.qty - qty) } : stk) }
+              : c,
+          ),
+          history: pushHistory(s, 'edit', `Consumed ${qty} from stock`),
+        }));
       },
 
       // ── Bundles ───────────────────────────────────────────────────────────

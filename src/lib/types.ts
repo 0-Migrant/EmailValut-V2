@@ -27,6 +27,8 @@ export interface OrderItem {
   itemId: string;
   qty: number;
   price: number;
+  credentialId?: string;
+  stockId?: string;
 }
 
 export type OrderStatus = 'waiting' | 'pending' | 'done' | 'cancelled';

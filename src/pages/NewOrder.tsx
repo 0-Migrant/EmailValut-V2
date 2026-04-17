@@ -6,18 +6,24 @@ import { fmt, isLoyaltyMilestone } from '@/lib/utils';
 import type { OrderItem } from '@/lib/types';
 
 export default function NewOrder() {
-  const navigate      = useNavigate();
+  const navigate        = useNavigate();
   const { showLoyalty } = useModal();
-  const storeItems  = useVaultStore((s) => s.items);
-  const deliveryMen = useVaultStore((s) => s.deliveryMen);
-  const orders      = useVaultStore((s) => s.orders);
-  const bundles     = useVaultStore((s) => s.bundles);
-  const addOrder    = useVaultStore((s) => s.addOrder);
+  const storeItems    = useVaultStore((s) => s.items);
+  const deliveryMen   = useVaultStore((s) => s.deliveryMen);
+  const orders        = useVaultStore((s) => s.orders);
+  const bundles       = useVaultStore((s) => s.bundles);
+  const credentials   = useVaultStore((s) => s.credentials);
+  const addOrder      = useVaultStore((s) => s.addOrder);
+  const consumeStock  = useVaultStore((s) => s.consumeStock);
 
   const [dmId,        setDmId]        = useState('');
   const [customerId,  setCustomerId]  = useState('');
   const [orderItems,  setOrderItems]  = useState<OrderItem[]>([]);
   const [customPrice, setCustomPrice] = useState('');
+
+  // Selected credential IDs for resource accounts
+  const [selectedCredIds, setSelectedCredIds] = useState<Set<string>>(new Set());
+  const [credSearch, setCredSearch] = useState('');
 
   // Derived totals
   const itemsTotal = orderItems.reduce((a, oi) => a + oi.price * oi.qty, 0);
@@ -34,20 +40,26 @@ export default function NewOrder() {
     const item = storeItems.find((i) => i.id === itemId);
     if (!item) return;
     setOrderItems((prev) => {
-      const ex = prev.find((oi) => oi.itemId === itemId);
+      const ex = prev.find((oi) => oi.itemId === itemId && !oi.credentialId);
       return ex
-        ? prev.map((oi) => oi.itemId === itemId ? { ...oi, qty: oi.qty + 1 } : oi)
-        : [...prev, { itemId, qty: 0, price: item.price }];
+        ? prev.map((oi) => oi.itemId === itemId && !oi.credentialId ? { ...oi, qty: oi.qty + 1 } : oi)
+        : [...prev, { itemId, qty: 1, price: item.price }];
     });
   }
 
-  function changeQty(itemId: string, val: string) {
+  function changeQty(itemId: string, val: string, credentialId?: string) {
     const qty = val === '' ? 0 : Math.max(0, parseInt(val) || 0);
-    setOrderItems((prev) => prev.map((oi) => oi.itemId === itemId ? { ...oi, qty } : oi));
+    setOrderItems((prev) =>
+      prev.map((oi) =>
+        oi.itemId === itemId && oi.credentialId === credentialId ? { ...oi, qty } : oi
+      )
+    );
   }
 
-  function removeItem(itemId: string) {
-    setOrderItems((prev) => prev.filter((oi) => oi.itemId !== itemId));
+  function removeItem(itemId: string, credentialId?: string) {
+    setOrderItems((prev) =>
+      prev.filter((oi) => !(oi.itemId === itemId && oi.credentialId === credentialId))
+    );
   }
 
   function addBundleToOrder(bundleId: string) {
@@ -59,9 +71,9 @@ export default function NewOrder() {
       bundle.items.forEach((bi) => {
         const item = storeItems.find((i) => i.id === bi.itemId);
         if (!item) return;
-        const ex = next.find((oi) => oi.itemId === bi.itemId);
+        const ex = next.find((oi) => oi.itemId === bi.itemId && !oi.credentialId);
         if (ex) {
-          next = next.map((oi) => oi.itemId === bi.itemId ? { ...oi, qty: oi.qty + bi.qty } : oi);
+          next = next.map((oi) => oi.itemId === bi.itemId && !oi.credentialId ? { ...oi, qty: oi.qty + bi.qty } : oi);
         } else {
           next = [...next, { itemId: bi.itemId, qty: bi.qty, price: item.price }];
         }
@@ -70,14 +82,63 @@ export default function NewOrder() {
     });
   }
 
+  // Toggle a credential account in/out of the selected set
+  function toggleCred(credId: string) {
+    setSelectedCredIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(credId)) {
+        next.delete(credId);
+        // Remove any order items tied to this credential
+        setOrderItems((oi) => oi.filter((x) => x.credentialId !== credId));
+      } else {
+        next.add(credId);
+      }
+      return next;
+    });
+  }
+
+  // Add a stock line from a credential as an order item
+  function addStockToOrder(credId: string, stockId: string) {
+    const cred = credentials.find((c) => c.id === credId);
+    const stock = cred?.stocks.find((s) => s.id === stockId);
+    if (!stock) return;
+
+    // Find a matching item by name (case-insensitive) for price
+    const item = storeItems.find((i) => i.name.toLowerCase() === stock.name.toLowerCase());
+    const price = item?.price ?? 0;
+    const itemId = item?.id ?? stockId; // fallback to stockId if no item match
+
+    setOrderItems((prev) => {
+      const ex = prev.find((oi) => oi.credentialId === credId && oi.stockId === stockId);
+      if (ex) return prev; // already added
+      return [...prev, { itemId, qty: stock.qty, price, credentialId: credId, stockId }];
+    });
+  }
+
+  function removeStockFromOrder(credId: string, stockId: string) {
+    setOrderItems((prev) => prev.filter((oi) => !(oi.credentialId === credId && oi.stockId === stockId)));
+  }
+
+  function isStockInOrder(credId: string, stockId: string) {
+    return orderItems.some((oi) => oi.credentialId === credId && oi.stockId === stockId);
+  }
+
   function submit() {
     if (!dmId) { alert('Please select a delivery man.'); return; }
     const validItems = orderItems.filter((oi) => oi.qty > 0);
     if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
     const cp2 = customPrice !== '' && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : null;
     addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2 });
+
+    // Decrement stock for every consumed stock item
+    validItems.forEach((oi) => {
+      if (oi.credentialId && oi.stockId) {
+        consumeStock(oi.credentialId, oi.stockId, oi.qty);
+      }
+    });
+
     if (customerId) {
-      const prevCount = orders.filter((o) => o.customerId === customerId).length; // after add, length is +1
+      const prevCount = orders.filter((o) => o.customerId === customerId).length;
       if (isLoyaltyMilestone(prevCount)) {
         showLoyalty(customerId, prevCount);
       }
@@ -86,6 +147,13 @@ export default function NewOrder() {
   }
 
   const cats = [...new Set(storeItems.map((i) => i.category || 'Other'))].sort();
+
+  const filteredCreds = credentials.filter((c) =>
+    c.name.toLowerCase().includes(credSearch.toLowerCase()) ||
+    c.email.toLowerCase().includes(credSearch.toLowerCase())
+  );
+
+  const selectedCreds = credentials.filter((c) => selectedCredIds.has(c.id));
 
   return (
     <>
@@ -110,26 +178,114 @@ export default function NewOrder() {
           </div>
         </div>
 
+        {/* Resource Accounts */}
+        {credentials.length > 0 && (
+          <div className="card">
+            <div className="card-title">Resource Accounts</div>
+            <p style={{ fontSize:12, color:'var(--text-hint)', marginBottom:10 }}>
+              Select one or more accounts to pull stocks from. Selected stocks are added to the order automatically.
+            </p>
+
+            {/* Account search + list */}
+            <input
+              className="inp"
+              style={{ marginBottom:10 }}
+              placeholder="Search accounts..."
+              value={credSearch}
+              onChange={(e) => setCredSearch(e.target.value)}
+            />
+            <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:180, overflowY:'auto', marginBottom:12 }}>
+              {filteredCreds.map((c) => (
+                <label key={c.id} style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', padding:'6px 8px', borderRadius:6, background: selectedCredIds.has(c.id) ? 'var(--accent-bg, rgba(59,130,246,0.08))' : 'transparent', border: selectedCredIds.has(c.id) ? '1px solid var(--accent)' : '1px solid var(--border)' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCredIds.has(c.id)}
+                    onChange={() => toggleCred(c.id)}
+                  />
+                  <span style={{ fontWeight:600, fontSize:13 }}>{c.name}</span>
+                  <span style={{ fontSize:12, color:'var(--text-hint)' }}>{c.email}</span>
+                  {c.stocks.length > 0 && (
+                    <span className="tag" style={{ marginLeft:'auto' }}>{c.stocks.length} stock{c.stocks.length !== 1 ? 's' : ''}</span>
+                  )}
+                </label>
+              ))}
+              {!filteredCreds.length && (
+                <div style={{ fontSize:13, color:'var(--text-hint)', padding:'8px 0' }}>No accounts match.</div>
+              )}
+            </div>
+
+            {/* Stocks for selected accounts */}
+            {selectedCreds.map((cred) => (
+              <div key={cred.id} style={{ marginBottom:12, border:'1px solid var(--border)', borderRadius:8, overflow:'hidden' }}>
+                <div style={{ padding:'8px 12px', background:'var(--surface-alt, var(--surface))', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontWeight:700, fontSize:13 }}>{cred.name}</span>
+                  <span style={{ fontSize:12, color:'var(--text-hint)' }}>{cred.email}</span>
+                </div>
+                {!cred.stocks.length ? (
+                  <div style={{ padding:'10px 12px', fontSize:13, color:'var(--text-hint)' }}>No stocks on this account.</div>
+                ) : (
+                  <div style={{ padding:'8px 12px', display:'flex', flexDirection:'column', gap:6 }}>
+                    {cred.stocks.map((s) => {
+                      const inOrder = isStockInOrder(cred.id, s.id);
+                      const oi = orderItems.find((x) => x.credentialId === cred.id && x.stockId === s.id);
+                      const matchedItem = storeItems.find((i) => i.name.toLowerCase() === s.name.toLowerCase());
+                      return (
+                        <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 0' }}>
+                          <input
+                            type="checkbox"
+                            checked={inOrder}
+                            onChange={() => inOrder ? removeStockFromOrder(cred.id, s.id) : addStockToOrder(cred.id, s.id)}
+                          />
+                          <span style={{ flex:1, fontSize:13, fontWeight:500 }}>{s.name}</span>
+                          <span style={{ fontSize:12, color:'var(--text-hint)' }}>avail: {s.qty}</span>
+                          {matchedItem && <span style={{ fontSize:12, color:'var(--accent)' }}>{fmt(matchedItem.price)} $</span>}
+                          {!matchedItem && <span style={{ fontSize:11, color:'var(--text-hint)', fontStyle:'italic' }}>no price match</span>}
+                          {inOrder && oi && (
+                            <input
+                              className="inp"
+                              type="number"
+                              min={0}
+                              max={s.qty}
+                              value={oi.qty || ''}
+                              style={{ width:60, height:28, fontSize:12 }}
+                              onChange={(e) => changeQty(oi.itemId, e.target.value, cred.id)}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Order Items */}
         <div className="card">
           <div className="card-title">Order Items</div>
 
           <div className="order-items-list">
             {!orderItems.length
-              ? <div style={{ fontSize:13, color:'var(--text-hint)', textAlign:'center', padding:16 }}>Use the dropdown to add items.</div>
+              ? <div style={{ fontSize:13, color:'var(--text-hint)', textAlign:'center', padding:16 }}>Use the dropdown or select accounts above to add items.</div>
               : orderItems.map((oi) => {
                   const item = storeItems.find((i) => i.id === oi.itemId);
+                  const cred = oi.credentialId ? credentials.find((c) => c.id === oi.credentialId) : null;
+                  const stock = oi.stockId && cred ? cred.stocks.find((s) => s.id === oi.stockId) : null;
                   return (
-                    <div key={oi.itemId} className="order-item-row">
-                      <div className="item-label">{item?.name ?? '?'}</div>
+                    <div key={`${oi.itemId}-${oi.credentialId ?? ''}`} className="order-item-row">
+                      <div className="item-label">
+                        <div>{stock ? stock.name : (item?.name ?? '?')}</div>
+                        {cred && <div style={{ fontSize:11, color:'var(--text-hint)' }}>📧 {cred.email}</div>}
+                      </div>
                       <input className="inp" type="number" min={0} value={oi.qty || ''}
                         style={{ height:28, fontSize:12 }}
-                        onChange={(e) => changeQty(oi.itemId, e.target.value)} />
+                        onChange={(e) => changeQty(oi.itemId, e.target.value, oi.credentialId)} />
                       <div>
                         <div style={{ fontSize:10, color:'var(--text-hint)' }}>@ {fmt(oi.price)}</div>
                         <div className="item-subtotal">{fmt(oi.price * oi.qty)} $ USD</div>
                       </div>
-                      <button className="btn btn-danger btn-xs btn-icon" onClick={() => removeItem(oi.itemId)}>✕</button>
+                      <button className="btn btn-danger btn-xs btn-icon" onClick={() => removeItem(oi.itemId, oi.credentialId)}>✕</button>
                     </div>
                   );
                 })

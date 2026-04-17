@@ -12,7 +12,6 @@ export default function Credentials() {
   const updateCredential = useVaultStore((s) => s.updateCredential);
   const deleteCredential = useVaultStore((s) => s.deleteCredential);
   const addStock = useVaultStore((s) => s.addStock);
-  const updateStock = useVaultStore((s) => s.updateStock);
   const deleteStock = useVaultStore((s) => s.deleteStock);
   const { showConfirm } = useModal();
 

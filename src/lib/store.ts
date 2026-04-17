@@ -107,7 +107,7 @@ const supabaseStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
     if (typeof window === 'undefined') return null;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('vault')
         .select('data')
         .eq('id', 1)
@@ -131,7 +131,7 @@ const supabaseStorage: StateStorage = {
     if (typeof window === 'undefined') return;
     try {
       const { state } = JSON.parse(value);
-      const { error } = await supabase.from('vault').upsert({ id: 1, data: state });
+      const { error } = await supabase!.from('vault').upsert({ id: 1, data: state });
       if (error) {
         console.warn('Supabase setItem failed, falling back to localStorage:', error);
         // Fallback to localStorage
@@ -145,7 +145,7 @@ const supabaseStorage: StateStorage = {
   removeItem: async (): Promise<void> => {
     if (typeof window === 'undefined') return;
     try {
-      const { error } = await supabase.from('vault').delete().eq('id', 1);
+      const { error } = await supabase!.from('vault').delete().eq('id', 1);
       if (error) {
         console.warn('Supabase removeItem failed, falling back to localStorage:', error);
         window.localStorage.removeItem('vault_state');
@@ -207,10 +207,9 @@ export const useVaultStore = create<VaultStore>()(
       addCategory(name) {
         set((s) => {
           if (s.categories.includes(name)) return s;
-          const snap = JSON.stringify(s);
           return {
             categories: [...s.categories, name],
-            history: pushHistory(s, 'add', `Added category: ${name}`, snap),
+            history: pushHistory(s, 'add', `Added category: ${name}`),
           };
         });
       },
@@ -267,10 +266,9 @@ export const useVaultStore = create<VaultStore>()(
       // ── Orders ────────────────────────────────────────────────────────────
       addOrder(data) {
         const order: Order = {
+          ...data,
           id: uid(),
           createdAt: new Date().toISOString(),
-          status: 'pending',
-          ...data,
         };
         set((s) => ({
           orders: [order, ...s.orders],

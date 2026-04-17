@@ -68,29 +68,18 @@ export type VaultStore = AppState & AppActions;
 
 // ─── Default seed data ────────────────────────────────────────────────────────
 
-const DEFAULT_CATEGORIES = ['Food', 'Drinks', 'Sides'];
+const DEFAULT_CATEGORIES = [''];
 
-const DEFAULT_ITEMS: Item[] = [
-  { id: uid(), name: 'Burger',   price: 45, category: 'Food' },
-  { id: uid(), name: 'Pizza',    price: 80, category: 'Food' },
-  { id: uid(), name: 'Shawarma', price: 35, category: 'Food' },
-  { id: uid(), name: 'Fries',    price: 20, category: 'Sides' },
-  { id: uid(), name: 'Cola',     price: 15, category: 'Drinks' },
-  { id: uid(), name: 'Water',    price: 8,  category: 'Drinks' },
-  { id: uid(), name: 'Juice',    price: 18, category: 'Drinks' },
-];
+const DEFAULT_ITEMS: Item[] = [];
 
-const DEFAULT_DELIVERY_MEN: DeliveryMan[] = [
-  { id: uid(), name: 'Ahmed Hassan' },
-  { id: uid(), name: 'Mohamed Ali' },
-];
+const DEFAULT_DELIVERY_MEN: DeliveryMan[] = [];
 
 const DEFAULT_SETTINGS: Settings = {
   showpass: false,
   confirmdelete: true,
   rowsperpage: 25,
-  historyretention: 30,
-  historylimit: 200,
+  historyretention: 7,
+  historylimit: 50,
   theme: 'light',
 };
 
@@ -100,14 +89,13 @@ function pushHistory(
   state: AppState,
   type: HistoryEntry['type'],
   msg: string,
-  snapshot?: string,
 ): HistoryEntry[] {
   const entry: HistoryEntry = {
     id: uid(),
     type,
     msg,
     time: new Date().toISOString(),
-    snapshot,
+    snapshot: JSON.stringify({ ...state, history: [] }),
   };
   const list = [entry, ...state.history].slice(0, state.settings.historylimit);
   return list;
@@ -117,7 +105,7 @@ function pushHistory(
 
 const supabaseStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
-    if (typeof window === 'undefined' || !supabase) return null;
+    if (typeof window === 'undefined') return null;
     try {
       const { data, error } = await supabase
         .from('vault')
@@ -127,36 +115,44 @@ const supabaseStorage: StateStorage = {
 
       if (error) {
         if (error.code !== 'PGRST116') {
-          console.error('Supabase getItem error:', error);
+          console.warn('Supabase getItem failed, falling back to localStorage:', error);
         }
-        return null;
+        // Fallback to localStorage
+        return window.localStorage.getItem('vault_state');
       }
 
       return JSON.stringify({ state: data?.data ?? null, version: 0 });
     } catch (err) {
-      console.error('Failed to fetch vault data from Supabase:', err);
-      return null;
+      console.warn('Failed to fetch vault data from Supabase, falling back to localStorage:', err);
+      return window.localStorage.getItem('vault_state');
     }
   },
   setItem: async (name: string, value: string): Promise<void> => {
-    if (typeof window === 'undefined' || !supabase) return;
+    if (typeof window === 'undefined') return;
     try {
       const { state } = JSON.parse(value);
       const { error } = await supabase.from('vault').upsert({ id: 1, data: state });
       if (error) {
-        console.error('Supabase setItem error:', error);
+        console.warn('Supabase setItem failed, falling back to localStorage:', error);
+        // Fallback to localStorage
+        window.localStorage.setItem(name, value);
       }
     } catch (err) {
-      console.error('Failed to save vault data to Supabase:', err);
+      console.warn('Failed to save vault data to Supabase, falling back to localStorage:', err);
+      window.localStorage.setItem(name, value);
     }
   },
   removeItem: async (): Promise<void> => {
-    if (typeof window === 'undefined' || !supabase) return;
+    if (typeof window === 'undefined') return;
     try {
       const { error } = await supabase.from('vault').delete().eq('id', 1);
-      if (error) console.error('Supabase removeItem error:', error);
+      if (error) {
+        console.warn('Supabase removeItem failed, falling back to localStorage:', error);
+        window.localStorage.removeItem('vault_state');
+      }
     } catch (err) {
-      console.error('Failed to remove vault data from Supabase:', err);
+      console.warn('Failed to remove vault data from Supabase, falling back to localStorage:', err);
+      window.localStorage.removeItem('vault_state');
     }
   },
 };
@@ -182,30 +178,27 @@ export const useVaultStore = create<VaultStore>()(
       // ── Items ──────────────────────────────────────────────────────────────
       addItem(data) {
         set((s) => {
-          const snap = JSON.stringify(s);
           const item: Item = { id: uid(), ...data };
           return {
             items: [...s.items, item],
-            history: pushHistory(s, 'add', `Added item: ${data.name} @ ${data.price}`, snap),
+            history: pushHistory(s, 'add', `Added item: ${data.name} @ ${data.price}`),
           };
         });
       },
       updateItem(id, data) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             items: s.items.map((it) => (it.id === id ? { ...it, ...data } : it)),
-            history: pushHistory(s, 'edit', `Updated item: ${data.name ?? id}`, snap),
+            history: pushHistory(s, 'edit', `Updated item: ${data.name ?? id}`),
           };
         });
       },
       deleteItem(id) {
         set((s) => {
-          const snap = JSON.stringify(s);
           const it = s.items.find((i) => i.id === id);
           return {
             items: s.items.filter((i) => i.id !== id),
-            history: pushHistory(s, 'del', `Deleted item: ${it?.name ?? id}`, snap),
+            history: pushHistory(s, 'del', `Deleted item: ${it?.name ?? id}`),
           };
         });
       },
@@ -223,25 +216,23 @@ export const useVaultStore = create<VaultStore>()(
       },
       renameCategory(oldName, newName) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             categories: s.categories.map((c) => (c === oldName ? newName : c)),
             items: s.items.map((it) =>
               it.category === oldName ? { ...it, category: newName } : it,
             ),
-            history: pushHistory(s, 'edit', `Renamed category: ${oldName} → ${newName}`, snap),
+            history: pushHistory(s, 'edit', `Renamed category: ${oldName} → ${newName}`),
           };
         });
       },
       deleteCategory(name) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             categories: s.categories.filter((c) => c !== name),
             items: s.items.map((it) =>
               it.category === name ? { ...it, category: 'Uncategorized' } : it,
             ),
-            history: pushHistory(s, 'del', `Deleted category: ${name}`, snap),
+            history: pushHistory(s, 'del', `Deleted category: ${name}`),
           };
         });
       },
@@ -249,63 +240,58 @@ export const useVaultStore = create<VaultStore>()(
       // ── Delivery Men ──────────────────────────────────────────────────────
       addDeliveryMan(data) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             deliveryMen: [...s.deliveryMen, { id: uid(), ...data }],
-            history: pushHistory(s, 'add', `Added delivery man: ${data.name}`, snap),
+            history: pushHistory(s, 'add', `Added delivery man: ${data.name}`),
           };
         });
       },
       updateDeliveryMan(id, data) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             deliveryMen: s.deliveryMen.map((d) => (d.id === id ? { ...d, ...data } : d)),
-            history: pushHistory(s, 'edit', `Updated delivery man: ${data.name ?? id}`, snap),
+            history: pushHistory(s, 'edit', `Updated delivery man: ${data.name ?? id}`),
           };
         });
       },
       deleteDeliveryMan(id) {
         set((s) => {
-          const snap = JSON.stringify(s);
           const dm = s.deliveryMen.find((d) => d.id === id);
           return {
             deliveryMen: s.deliveryMen.filter((d) => d.id !== id),
-            history: pushHistory(s, 'del', `Deleted delivery man: ${dm?.name ?? id}`, snap),
+            history: pushHistory(s, 'del', `Deleted delivery man: ${dm?.name ?? id}`),
           };
         });
       },
 
       // ── Orders ────────────────────────────────────────────────────────────
       addOrder(data) {
-        const snap = JSON.stringify(get());
         const order: Order = {
           id: uid(),
           createdAt: new Date().toISOString(),
+          status: 'pending',
           ...data,
         };
         set((s) => ({
           orders: [order, ...s.orders],
           history: pushHistory(s, 'add',
-            `New order #${order.id.slice(-5)} — ${order.items.length} items`, snap),
+            `New order #${order.id.slice(-5)} — ${order.items.length} items`),
         }));
         return order;
       },
       setOrderStatus(id, status) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)),
-            history: pushHistory(s, 'edit', `Order ${id.slice(-5)} → ${status}`, snap),
+            history: pushHistory(s, 'edit', `Order ${id.slice(-5)} → ${status}`),
           };
         });
       },
       deleteOrder(id) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             orders: s.orders.filter((o) => o.id !== id),
-            history: pushHistory(s, 'del', `Deleted order ${id.slice(-5)}`, snap),
+            history: pushHistory(s, 'del', `Deleted order ${id.slice(-5)}`),
           };
         });
       },
@@ -313,7 +299,6 @@ export const useVaultStore = create<VaultStore>()(
       // ── Credentials ───────────────────────────────────────────────────────
       addCredential(data) {
         set((s) => {
-          const snap = JSON.stringify(s);
           const cred: Credential = {
             id: uid(),
             stocks: [],
@@ -322,44 +307,40 @@ export const useVaultStore = create<VaultStore>()(
           };
           return {
             credentials: [cred, ...s.credentials],
-            history: pushHistory(s, 'add', `Added credential: ${data.name} (${data.email})`, snap),
+            history: pushHistory(s, 'add', `Added credential: ${data.name} (${data.email})`),
           };
         });
       },
       updateCredential(id, data) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             credentials: s.credentials.map((c) => (c.id === id ? { ...c, ...data } : c)),
-            history: pushHistory(s, 'edit', `Edited credential: ${data.name ?? id}`, snap),
+            history: pushHistory(s, 'edit', `Edited credential: ${data.name ?? id}`),
           };
         });
       },
       deleteCredential(id) {
         set((s) => {
-          const snap = JSON.stringify(s);
           const cred = s.credentials.find((c) => c.id === id);
           return {
             credentials: s.credentials.filter((c) => c.id !== id),
-            history: pushHistory(s, 'del', `Deleted credential: ${cred?.name ?? id}`, snap),
+            history: pushHistory(s, 'del', `Deleted credential: ${cred?.name ?? id}`),
           };
         });
       },
       addStock(credId, stock) {
         set((s) => {
-          const snap = JSON.stringify(s);
           const newStock: Stock = { id: uid(), ...stock };
           return {
             credentials: s.credentials.map((c) =>
               c.id === credId ? { ...c, stocks: [...c.stocks, newStock] } : c,
             ),
-            history: pushHistory(s, 'edit', `Added stock ${stock.name} to credential`, snap),
+            history: pushHistory(s, 'edit', `Added stock ${stock.name} to credential`),
           };
         });
       },
       updateStock(credId, stockId, data) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             credentials: s.credentials.map((c) =>
               c.id === credId
@@ -371,20 +352,19 @@ export const useVaultStore = create<VaultStore>()(
                   }
                 : c,
             ),
-            history: pushHistory(s, 'edit', `Updated stock`, snap),
+            history: pushHistory(s, 'edit', `Updated stock`),
           };
         });
       },
       deleteStock(credId, stockId) {
         set((s) => {
-          const snap = JSON.stringify(s);
           return {
             credentials: s.credentials.map((c) =>
               c.id === credId
                 ? { ...c, stocks: c.stocks.filter((stk) => stk.id !== stockId) }
                 : c,
             ),
-            history: pushHistory(s, 'del', `Removed stock`, snap),
+            history: pushHistory(s, 'del', `Removed stock`),
           };
         });
       },
@@ -400,20 +380,17 @@ export const useVaultStore = create<VaultStore>()(
         const entry = get().history.find((h) => h.id === historyId);
         if (!entry?.snapshot) return false;
         try {
-          const restored = JSON.parse(entry.snapshot) as Partial<AppState>;
-          set((s) => ({
+          const restored = JSON.parse(entry.snapshot) as Omit<AppState, 'history'>;
+          const index = get().history.findIndex((h) => h.id === historyId);
+          set({
             ...restored,
             credentials: (restored.credentials ?? []).map((c) => ({
               ...c,
               stocks: c.stocks ?? [],
             })),
             categories: restored.categories ?? DEFAULT_CATEGORIES,
-            history: pushHistory(
-              { ...s, ...restored },
-              'edit',
-              `Restored snapshot from ${new Date(entry.time).toLocaleString()}`,
-            ),
-          }));
+            history: get().history.slice(0, index + 1),
+          });
           return true;
         } catch {
           return false;

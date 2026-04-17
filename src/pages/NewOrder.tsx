@@ -37,12 +37,12 @@ export default function NewOrder() {
       const ex = prev.find((oi) => oi.itemId === itemId);
       return ex
         ? prev.map((oi) => oi.itemId === itemId ? { ...oi, qty: oi.qty + 1 } : oi)
-        : [...prev, { itemId, qty: 1, price: item.price }];
+        : [...prev, { itemId, qty: 0, price: item.price }];
     });
   }
 
   function changeQty(itemId: string, val: string) {
-    const qty = Math.max(1, parseInt(val) || 1);
+    const qty = val === '' ? 0 : Math.max(0, parseInt(val) || 0);
     setOrderItems((prev) => prev.map((oi) => oi.itemId === itemId ? { ...oi, qty } : oi));
   }
 
@@ -52,9 +52,10 @@ export default function NewOrder() {
 
   function submit() {
     if (!dmId) { alert('Please select a delivery man.'); return; }
-    if (!orderItems.length) { alert('Please add at least one item.'); return; }
+    const validItems = orderItems.filter((oi) => oi.qty > 0);
+    if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
     const cp2 = customPrice !== '' && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : null;
-    const order = addOrder({ deliveryManId: dmId, customerId, items: orderItems, status: 'waiting', customPrice: cp2 });
+    const order = addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2 });
     if (customerId) {
       const prevCount = orders.filter((o) => o.customerId === customerId).length; // after add, length is +1
       if (isLoyaltyMilestone(prevCount)) {
@@ -101,7 +102,7 @@ export default function NewOrder() {
                   return (
                     <div key={oi.itemId} className="order-item-row">
                       <div className="item-label">{item?.name ?? '?'}</div>
-                      <input className="inp" type="number" min={1} value={oi.qty}
+                      <input className="inp" type="number" min={0} value={oi.qty || ''}
                         style={{ height:28, fontSize:12 }}
                         onChange={(e) => changeQty(oi.itemId, e.target.value)} />
                       <div>

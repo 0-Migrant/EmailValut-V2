@@ -3,6 +3,7 @@ import React from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmtDate } from '@/lib/utils';
+import { generateCredentialsPDF } from '@/lib/pdf';
 
 export default function Credentials() {
   const credentials = useVaultStore((s) => s.credentials);
@@ -21,6 +22,8 @@ export default function Credentials() {
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [showAllPass, setShowAllPass] = useState(settings.showpass);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const [expandingCred, setExpandingCred] = useState<string | null>(null);
   const [newStockName, setNewStockName] = useState('');
@@ -73,10 +76,62 @@ export default function Credentials() {
     setNewStockQty('');
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      if (filtered.length > 0 && filtered.every((c) => prev.has(c.id))) {
+        return new Set();
+      }
+      return new Set(filtered.map((c) => c.id));
+    });
+  }
+
+  async function copyText(value: string, label: string) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = value;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedKey(label);
+      window.setTimeout(() => setCopiedKey(null), 1200);
+    } catch {
+      alert('Failed to copy to clipboard.');
+    }
+  }
+
+  function downloadCredentials(useSelected: boolean) {
+    const exported = (useSelected ? credentials.filter((c) => selectedIds.has(c.id)) : credentials);
+
+    if (!exported.length) {
+      alert('No credentials selected to download.');
+      return;
+    }
+
+    generateCredentialsPDF(exported);
+  }
+
   const filtered = credentials.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const allSelected = filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id));
 
   return (
     <>
@@ -113,6 +168,22 @@ export default function Credentials() {
               {showAllPass ? '🙈 Hide All' : '👁 Show All'}
             </button>
           </div>
+          <div className="flex-row" style={{ marginBottom: 16, gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => downloadCredentials(false)}>
+              � Download All (PDF)
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => downloadCredentials(true)}
+              disabled={!selectedIds.size}
+            >
+              📄 Download Selected ({selectedIds.size}) (PDF)
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={toggleSelectAll}>
+              {allSelected ? 'Deselect All' : 'Select All'}
+            </button>
+            <div style={{ flex: 1 }} />
+          </div>
 
           {!filtered.length ? (
             <div className="empty-state" style={{ padding: '20px 0' }}><div className="empty-icon">🔒</div>No credentials found.</div>
@@ -121,6 +192,9 @@ export default function Credentials() {
               <table>
                 <thead>
                   <tr>
+                    <th style={{ width: 40 }}>
+                      <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} />
+                    </th>
                     <th>Service</th>
                     <th>User / Email</th>
                     <th>Password</th>
@@ -133,6 +207,13 @@ export default function Credentials() {
                     <React.Fragment key={c.id}>
                       <tr>
                         <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(c.id)}
+                            onChange={() => toggleSelect(c.id)}
+                          />
+                        </td>
+                        <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <button className={`expand-btn ${expandingCred === c.id ? 'open' : ''}`} onClick={() => setExpandingCred(expandingCred === c.id ? null : c.id)}>
                               {expandingCred === c.id ? '▼' : '▶'}
@@ -140,13 +221,35 @@ export default function Credentials() {
                             <span style={{ fontWeight: 600 }}>{c.name}</span>
                           </div>
                         </td>
-                        <td style={{ fontSize: 13 }}>{c.email}</td>
+                        <td style={{ fontSize: 13 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>{c.email}</span>
+                            <button
+                              type="button"
+                              className={`copy-btn ${copiedKey === `email-${c.id}` ? 'copied' : ''}`}
+                              onClick={() => copyText(c.email, `email-${c.id}`)}
+                              title="Copy email"
+                            >
+                              📋
+                            </button>
+                          </div>
+                        </td>
                         <td>
-                          {showAllPass ? (
-                            <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{c.pass}</span>
-                          ) : (
-                            <span className="pass-mask">••••••••</span>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {showAllPass ? (
+                              <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{c.pass}</span>
+                            ) : (
+                              <span className="pass-mask">••••••••</span>
+                            )}
+                            <button
+                              type="button"
+                              className={`copy-btn ${copiedKey === `pass-${c.id}` ? 'copied' : ''}`}
+                              onClick={() => copyText(c.pass, `pass-${c.id}`)}
+                              title="Copy password"
+                            >
+                              📋
+                            </button>
+                          </div>
                         </td>
                         <td><span className="tag">{fmtDate(c.added)}</span></td>
                         <td>
@@ -158,7 +261,7 @@ export default function Credentials() {
                       </tr>
                       {expandingCred === c.id && (
                         <tr>
-                          <td colSpan={5} className="stock-panel">
+                          <td colSpan={6} className="stock-panel">
                             <div className="stock-panel-header">
                               <span className="stock-panel-title">Resource Stocks</span>
                             </div>

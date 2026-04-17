@@ -14,6 +14,7 @@ import Dashboard from './pages/Dashboard';
 import NewOrder from './pages/NewOrder';
 import Orders from './pages/Orders';
 import Items from './pages/Items';
+import Bundles from './pages/Bundles';
 import Delivery from './pages/Delivery';
 import Credentials from './pages/Credentials';
 import History from './pages/History';
@@ -58,6 +59,7 @@ function App() {
           <Route path="/new-order" element={<NewOrder />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/items" element={<Items />} />
+          <Route path="/bundles" element={<Bundles />} />
           <Route path="/delivery" element={<Delivery />} />
           <Route path="/credentials" element={<Credentials />} />
           <Route path="/history" element={<History />} />

@@ -2,7 +2,12 @@ import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
   Item, DeliveryMan, Order, OrderStatus,
+<<<<<<< HEAD
   Credential, Stock, HistoryEntry, Settings, Bundle,
+=======
+  Credential, Stock, HistoryEntry, Settings,
+  Bundle,
+>>>>>>> 15bdeaa5e9f164dd7728345c2f1bf0afd711dd0e
 } from './types';
 import { uid } from './utils';
 import { supabase, isSupabaseEnabled } from './supabase';
@@ -16,6 +21,7 @@ interface AppState {
   orders: Order[];
   bundles: Bundle[];
   credentials: Credential[];
+  bundles: Bundle[];
   history: HistoryEntry[];
   settings: Settings;
 }
@@ -55,6 +61,11 @@ interface AppActions {
   addStock: (credId: string, stock: Omit<Stock, 'id'>) => void;
   updateStock: (credId: string, stockId: string, data: Partial<Omit<Stock, 'id'>>) => void;
   deleteStock: (credId: string, stockId: string) => void;
+
+  // Bundles
+  addBundle: (data: Omit<Bundle, 'id'>) => void;
+  updateBundle: (id: string, data: Partial<Omit<Bundle, 'id'>>) => void;
+  deleteBundle: (id: string) => void;
 
   // History
   deleteHistoryEntry: (id: string) => void;
@@ -179,6 +190,7 @@ export const useVaultStore = create<VaultStore>()(
       orders:       [],
       bundles:      [],
       credentials:  [],
+      bundles:      [],
       history:      [],
       settings:     DEFAULT_SETTINGS,
 
@@ -397,6 +409,32 @@ export const useVaultStore = create<VaultStore>()(
         });
       },
 
+      // ── Bundles ───────────────────────────────────────────────────────────
+      addBundle(data) {
+        set((s) => {
+          const bundle: Bundle = { id: uid(), ...data };
+          return {
+            bundles: [...s.bundles, bundle],
+            history: pushHistory(s, 'add', `Added bundle: ${data.name}`),
+          };
+        });
+      },
+      updateBundle(id, data) {
+        set((s) => ({
+          bundles: s.bundles.map((b) => (b.id === id ? { ...b, ...data } : b)),
+          history: pushHistory(s, 'edit', `Updated bundle: ${data.name ?? id}`),
+        }));
+      },
+      deleteBundle(id) {
+        set((s) => {
+          const b = s.bundles.find((x) => x.id === id);
+          return {
+            bundles: s.bundles.filter((x) => x.id !== id),
+            history: pushHistory(s, 'del', `Deleted bundle: ${b?.name ?? id}`),
+          };
+        });
+      },
+
       // ── History ───────────────────────────────────────────────────────────
       deleteHistoryEntry(id) {
         set((s) => ({ history: s.history.filter((h) => h.id !== id) }));
@@ -448,6 +486,7 @@ export const useVaultStore = create<VaultStore>()(
           deliveryMen: [],
           orders: [],
           credentials: [],
+          bundles: [],
           history: [],
         });
       },
@@ -473,6 +512,9 @@ export const useVaultStore = create<VaultStore>()(
                   .map((c) => ({ ...c, stocks: c.stocks ?? [] })),
               ]
             : s.credentials,
+          bundles: data.bundles
+            ? [...s.bundles, ...data.bundles.filter((x) => !s.bundles.find((b) => b.id === x.id))]
+            : s.bundles,
           history: pushHistory(s, 'add', 'Imported data from JSON backup'),
         }));
       },

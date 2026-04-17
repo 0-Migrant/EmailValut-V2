@@ -7,6 +7,17 @@ export interface Item {
   category: string;
 }
 
+export interface BundleItem {
+  itemId: string;
+  qty: number;
+}
+
+export interface Bundle {
+  id: string;
+  name: string;
+  items: BundleItem[];
+}
+
 export interface DeliveryMan {
   id: string;
   name: string;

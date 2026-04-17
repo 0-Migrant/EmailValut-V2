@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { useVaultStore } from '@/lib/store';
 import { fmt, fmtDateTime, orderTotal, orderItemsTotal, getPriceInfo, statusBadgeClass } from '@/lib/utils';
@@ -9,6 +10,7 @@ export default function OrderDetailModal() {
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
   const items       = useVaultStore((s) => s.items);
   const setStatus   = useVaultStore((s) => s.setOrderStatus);
+  const [showUnitPrice, setShowUnitPrice] = useState(true);
 
   if (!viewOrderId) return null;
   const order = orders.find((o) => o.id === viewOrderId);
@@ -88,8 +90,15 @@ export default function OrderDetailModal() {
           <span className={`badge ${statusBadgeClass(order.status)}`}>{order.status}</span>
         </div>
 
+        <div style={{ marginBottom: 10 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <input type="checkbox" checked={showUnitPrice} onChange={(e) => setShowUnitPrice(e.target.checked)} />
+            Show unit price in PDF
+          </label>
+        </div>
+
         <div className="modal-actions">
-          <button className="btn btn-primary btn-sm" onClick={() => generateOrderPDF(order!, items, dm)}>
+          <button className="btn btn-primary btn-sm" onClick={() => generateOrderPDF(order!, items, dm, showUnitPrice)}>
             📥 Download PDF
           </button>
           {order.status === 'waiting' && <>

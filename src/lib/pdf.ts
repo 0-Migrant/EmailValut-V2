@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { Order, Item, DeliveryMan, Credential } from './types';
 import { fmt, fmtDateTime, orderTotal, getPriceInfo } from './utils';
 
-export function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan) {
+export function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan, showUnitPrice = true) {
   const doc = new jsPDF();
   const info = getPriceInfo(order);
 
@@ -88,9 +88,9 @@ export function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan) 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
   doc.text('Item', 20, y);
-  doc.text('Qty', 110, y);
-  doc.text('Unit Price', 135, y);
-  doc.text('Amount', 170, y);
+  doc.text('Qty', showUnitPrice ? 110 : 130, y);
+  if (showUnitPrice) doc.text('Unit Price', 135, y);
+  doc.text('Amount', showUnitPrice ? 170 : 160, y);
 
   // Separator line
   doc.setDrawColor(200, 210, 220);
@@ -115,9 +115,9 @@ export function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan) 
     rowBg = !rowBg;
     
     doc.text(item?.name || 'Unknown Item', 20, y);
-    doc.text(String(oi.qty), 115, y);
-    doc.text(`$${fmt(oi.price)}`, 135, y);
-    doc.text(`$${fmt(sub)}`, 170, y);
+    doc.text(String(oi.qty), showUnitPrice ? 115 : 133, y);
+    if (showUnitPrice) doc.text(`$${fmt(oi.price)}`, 135, y);
+    doc.text(`$${fmt(sub)}`, showUnitPrice ? 170 : 160, y);
     
     y += 8;
     

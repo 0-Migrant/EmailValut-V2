@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
   Item, DeliveryMan, Order, OrderStatus,
-  Credential, Stock, HistoryEntry, Settings,
+  Credential, Stock, HistoryEntry, Settings, Bundle,
 } from './types';
 import { uid } from './utils';
 import { supabase, isSupabaseEnabled } from './supabase';
@@ -14,6 +14,7 @@ interface AppState {
   categories: string[];
   deliveryMen: DeliveryMan[];
   orders: Order[];
+  bundles: Bundle[];
   credentials: Credential[];
   history: HistoryEntry[];
   settings: Settings;
@@ -31,6 +32,11 @@ interface AppActions {
   addCategory: (name: string) => void;
   renameCategory: (oldName: string, newName: string) => void;
   deleteCategory: (name: string) => void;
+
+  // Bundles
+  addBundle: (data: Omit<Bundle, 'id'>) => void;
+  updateBundle: (id: string, data: Partial<Omit<Bundle, 'id'>>) => void;
+  deleteBundle: (id: string) => void;
 
   // Delivery Men
   addDeliveryMan: (data: Omit<DeliveryMan, 'id'>) => void;
@@ -171,6 +177,7 @@ export const useVaultStore = create<VaultStore>()(
       categories:   DEFAULT_CATEGORIES,
       deliveryMen:  DEFAULT_DELIVERY_MEN,
       orders:       [],
+      bundles:      [],
       credentials:  [],
       history:      [],
       settings:     DEFAULT_SETTINGS,
@@ -199,6 +206,29 @@ export const useVaultStore = create<VaultStore>()(
           return {
             items: s.items.filter((i) => i.id !== id),
             history: pushHistory(s, 'del', `Deleted item: ${it?.name ?? id}`),
+          };
+        });
+      },
+
+      // ── Bundles ───────────────────────────────────────────────────────────
+      addBundle(data) {
+        set((s) => ({
+          bundles: [...s.bundles, { id: uid(), ...data }],
+          history: pushHistory(s, 'add', `Added bundle: ${data.name}`),
+        }));
+      },
+      updateBundle(id, data) {
+        set((s) => ({
+          bundles: s.bundles.map((b) => (b.id === id ? { ...b, ...data } : b)),
+          history: pushHistory(s, 'edit', `Updated bundle: ${data.name ?? id}`),
+        }));
+      },
+      deleteBundle(id) {
+        set((s) => {
+          const b = s.bundles.find((x) => x.id === id);
+          return {
+            bundles: s.bundles.filter((x) => x.id !== id),
+            history: pushHistory(s, 'del', `Deleted bundle: ${b?.name ?? id}`),
           };
         });
       },

@@ -64,6 +64,17 @@ export interface Settings {
   theme: 'light' | 'dark';
 }
 
+export interface BundleItem {
+  itemId: string;
+  qty: number;
+}
+
+export interface Bundle {
+  id: string;
+  name: string;
+  items: BundleItem[];
+}
+
 // ─── Order Builder ────────────────────────────────────────────────────────────
 
 export interface OrderBuilder {

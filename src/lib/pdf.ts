@@ -9,7 +9,6 @@ export function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan) 
   // Modern color palette
   const primary = [59, 130, 246]; // Blue-500
   const dark = [15, 23, 42];      // Slate-900
-  const light = [248, 250, 252];  // Slate-50
   const green = [34, 197, 94];    // Green
   const orange = [249, 115, 22];  // Orange
 

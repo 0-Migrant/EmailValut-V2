@@ -1,10 +1,6 @@
 import { useVaultStore } from '@/lib/store';
 
-interface Props {
-  onMenuClick: () => void;
-}
-
-export default function Topbar({ onMenuClick }: Props) {
+export default function Topbar() {
   const theme = useVaultStore((s) => s.settings.theme);
   const updateSettings = useVaultStore((s) => s.updateSettings);
 

@@ -11,7 +11,6 @@ export default function NewOrder() {
   const storeItems  = useVaultStore((s) => s.items);
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
   const orders      = useVaultStore((s) => s.orders);
-  const categories  = useVaultStore((s) => s.categories);
   const addOrder    = useVaultStore((s) => s.addOrder);
 
   const [dmId,        setDmId]        = useState('');
@@ -55,7 +54,7 @@ export default function NewOrder() {
     const validItems = orderItems.filter((oi) => oi.qty > 0);
     if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
     const cp2 = customPrice !== '' && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : null;
-    const order = addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2 });
+    addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2 });
     if (customerId) {
       const prevCount = orders.filter((o) => o.customerId === customerId).length; // after add, length is +1
       if (isLoyaltyMilestone(prevCount)) {

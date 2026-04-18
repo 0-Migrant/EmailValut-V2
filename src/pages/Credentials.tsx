@@ -7,6 +7,7 @@ import { generateCredentialsPDF } from '@/lib/pdf';
 
 export default function Credentials() {
   const credentials = useVaultStore((s) => s.credentials);
+  const items = useVaultStore((s) => s.items);
   const settings = useVaultStore((s) => s.settings);
   const addCredential = useVaultStore((s) => s.addCredential);
   const updateCredential = useVaultStore((s) => s.updateCredential);
@@ -26,7 +27,7 @@ export default function Credentials() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const [expandingCred, setExpandingCred] = useState<string | null>(null);
-  const [newStockName, setNewStockName] = useState('');
+  const [newStockItemId, setNewStockItemId] = useState('');
   const [newStockQty, setNewStockQty] = useState('');
   const [editingStockQty, setEditingStockQty] = useState<Record<string, string>>({});
 
@@ -70,10 +71,11 @@ export default function Credentials() {
   }
 
   function handleAddStock(credId: string) {
-    if (!newStockName.trim()) return;
+    const item = items.find((i) => i.id === newStockItemId);
+    if (!item) return;
     const qty = parseInt(newStockQty) || 0;
-    addStock(credId, { name: newStockName.trim(), qty });
-    setNewStockName('');
+    addStock(credId, { name: item.name, qty, itemId: item.id, price: item.price });
+    setNewStockItemId('');
     setNewStockQty('');
   }
 
@@ -276,6 +278,7 @@ export default function Credentials() {
                                   return (
                                     <div key={s.id} className="stock-item">
                                       <span className="stock-name">{s.name}</span>
+                                      {s.price !== undefined && <span className="stock-qty" style={{ color: 'var(--color-primary)', minWidth: 60 }}>{s.price} $</span>}
                                       <button className="btn btn-ghost btn-xs btn-icon" onClick={() => updateStock(c.id, s.id, { qty: Math.max(0, s.qty - 1) })}>−</button>
                                       {editing ? (
                                         <input
@@ -306,7 +309,12 @@ export default function Credentials() {
                               )}
                             </div>
                             <div className="stock-add-form">
-                              <input className="stock-inp stock-inp-name" placeholder="Stock Name" value={newStockName} onChange={(e) => setNewStockName(e.target.value)} />
+                              <select className="stock-inp stock-inp-name" value={newStockItemId} onChange={(e) => setNewStockItemId(e.target.value)}>
+                                <option value="">Select item...</option>
+                                {items.map((it) => (
+                                  <option key={it.id} value={it.id}>{it.name} — {it.price} $</option>
+                                ))}
+                              </select>
                               <input className="stock-inp stock-inp-qty" type="number" placeholder="Qty" value={newStockQty} onChange={(e) => setNewStockQty(e.target.value)} />
                               <button className="btn btn-ghost btn-xs" onClick={() => handleAddStock(c.id)}>+ Add Stock</button>
                             </div>

@@ -47,6 +47,8 @@ export interface Stock {
   id: string;
   name: string;
   qty: number;
+  itemId?: string;
+  price?: number;
 }
 
 export interface Credential {

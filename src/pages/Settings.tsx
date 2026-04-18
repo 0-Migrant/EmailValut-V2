@@ -38,6 +38,12 @@ export default function Settings() {
   }
 
   function handleReset() {
+    const pass = window.prompt('🔐 Enter admin password to perform Factory Reset:');
+    if (pass === null) return;
+    if (pass !== 'arerede2000.') {
+      alert('❌ Incorrect password. Factory reset cancelled.');
+      return;
+    }
     showConfirm(
       'Factory Reset',
       'This will DELETE EVERYTHING (Orders, Items, Credentials, Settings). This cannot be undone. Are you absolutely sure?',

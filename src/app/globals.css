@@ -1159,7 +1159,8 @@ input[type=radio] {
 ═══════════════════════════════════════════════════════════ */
 .loyalty-modal {
   max-width: 440px;
-  border-top: 4px solid var(--green)
+  border-top: 4px solid var(--green);
+  overflow: hidden;
 }
 
 .loyalty-header {

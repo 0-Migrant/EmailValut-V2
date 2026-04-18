@@ -8,6 +8,7 @@ import OrderDetailModal from './components/modals/OrderDetailModal';
 import LoyaltyModal from './components/modals/LoyaltyModal';
 import { ModalProvider } from './context/ModalContext';
 import { useVaultStore } from './lib/store';
+import { supabase, isSupabaseEnabled } from './lib/supabase';
 
 // Page imports
 import Dashboard from './pages/Dashboard';
@@ -26,9 +27,27 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const pruneHistory = useVaultStore((s) => s.pruneHistory);
 
   useEffect(() => {
-    // Prune old logs on load based on user settings
     pruneHistory();
   }, [pruneHistory]);
+
+  useEffect(() => {
+    if (!isSupabaseEnabled) return;
+
+    const channel = supabase!
+      .channel('vault-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'vault', filter: 'id=eq.1' },
+        (payload) => {
+          const remote = (payload.new as { data?: unknown })?.data;
+          if (!remote) return;
+          useVaultStore.setState(remote as object, true);
+        },
+      )
+      .subscribe();
+
+    return () => { supabase!.removeChannel(channel); };
+  }, []);
 
   return (
     <ModalProvider>

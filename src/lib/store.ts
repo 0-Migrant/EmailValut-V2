@@ -111,7 +111,8 @@ function pushHistory(
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
-export let _lastWriteAt = 0;
+let _lastWriteAt = 0;
+export const getLastWriteAt = () => _lastWriteAt;
 
 function debouncedSupabaseSave(value: string) {
   _lastWriteAt = Date.now();

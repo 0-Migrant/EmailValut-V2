@@ -7,7 +7,7 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import OrderDetailModal from './components/modals/OrderDetailModal';
 import LoyaltyModal from './components/modals/LoyaltyModal';
 import { ModalProvider } from './context/ModalContext';
-import { useVaultStore, _lastWriteAt } from './lib/store';
+import { useVaultStore, getLastWriteAt } from './lib/store';
 import { supabase, isSupabaseEnabled } from './lib/supabase';
 
 // Page imports
@@ -39,7 +39,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'vault', filter: 'id=eq.1' },
         (payload) => {
-          if (Date.now() - _lastWriteAt < 3000) return;
+          if (Date.now() - getLastWriteAt() < 5000) return;
           const remote = (payload.new as { data?: Record<string, unknown> })?.data;
           if (!remote) return;
           const { items, categories, deliveryMen, orders, bundles, credentials, history, settings } = remote;

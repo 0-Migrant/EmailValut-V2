@@ -111,6 +111,7 @@ function pushHistory(
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+export let onSaveSuccess: (() => void) | null = null;
 
 function debouncedSupabaseSave(value: string) {
   if (_saveTimer) clearTimeout(_saveTimer);
@@ -122,11 +123,10 @@ function debouncedSupabaseSave(value: string) {
         console.warn('Supabase setItem failed, falling back to localStorage:', error);
         window.localStorage.setItem('vault_state', value);
       } else {
-        supabase!.channel('vault-broadcast').send({
-          type: 'broadcast',
-          event: 'data_updated',
-          payload: {},
-        });
+        // Mirror to localStorage so hard refresh has a fallback
+        window.localStorage.setItem('vault_state', value);
+        // Notify other browsers via the subscribed channel in App.tsx
+        onSaveSuccess?.();
       }
     } catch (err) {
       console.warn('Failed to save vault data to Supabase, falling back to localStorage:', err);

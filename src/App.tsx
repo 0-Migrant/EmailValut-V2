@@ -8,6 +8,7 @@ import OrderDetailModal from './components/modals/OrderDetailModal';
 import LoyaltyModal from './components/modals/LoyaltyModal';
 import { ModalProvider } from './context/ModalContext';
 import { useVaultStore } from './lib/store';
+import * as StoreModule from './lib/store';
 import { supabase, isSupabaseEnabled } from './lib/supabase';
 
 // Page imports
@@ -40,7 +41,14 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       })
       .subscribe();
 
-    return () => { supabase!.removeChannel(channel); };
+    StoreModule.onSaveSuccess = () => {
+      channel.send({ type: 'broadcast', event: 'data_updated', payload: {} });
+    };
+
+    return () => {
+      StoreModule.onSaveSuccess = null;
+      supabase!.removeChannel(channel);
+    };
   }, []);
 
   return (

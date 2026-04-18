@@ -111,8 +111,10 @@ function pushHistory(
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+export let _pendingWrite = false;
 
 function debouncedSupabaseSave(value: string) {
+  _pendingWrite = true;
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async () => {
     try {
@@ -125,6 +127,8 @@ function debouncedSupabaseSave(value: string) {
     } catch (err) {
       console.warn('Failed to save vault data to Supabase, falling back to localStorage:', err);
       window.localStorage.setItem('vault_state', value);
+    } finally {
+      _pendingWrite = false;
     }
   }, 1000);
 }

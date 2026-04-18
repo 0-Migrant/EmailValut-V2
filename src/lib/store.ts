@@ -110,6 +110,25 @@ function pushHistory(
 
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
+let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function debouncedSupabaseSave(value: string) {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    try {
+      const { state } = JSON.parse(value);
+      const { error } = await supabase!.from('vault').upsert({ id: 1, data: state });
+      if (error) {
+        console.warn('Supabase setItem failed, falling back to localStorage:', error);
+        window.localStorage.setItem('vault_state', value);
+      }
+    } catch (err) {
+      console.warn('Failed to save vault data to Supabase, falling back to localStorage:', err);
+      window.localStorage.setItem('vault_state', value);
+    }
+  }, 1000);
+}
+
 const supabaseStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
     if (typeof window === 'undefined') return null;
@@ -134,20 +153,9 @@ const supabaseStorage: StateStorage = {
       return window.localStorage.getItem('vault_state');
     }
   },
-  setItem: async (name: string, value: string): Promise<void> => {
+  setItem: async (_name: string, value: string): Promise<void> => {
     if (typeof window === 'undefined') return;
-    try {
-      const { state } = JSON.parse(value);
-      const { error } = await supabase!.from('vault').upsert({ id: 1, data: state });
-      if (error) {
-        console.warn('Supabase setItem failed, falling back to localStorage:', error);
-        // Fallback to localStorage
-        window.localStorage.setItem(name, value);
-      }
-    } catch (err) {
-      console.warn('Failed to save vault data to Supabase, falling back to localStorage:', err);
-      window.localStorage.setItem(name, value);
-    }
+    debouncedSupabaseSave(value);
   },
   removeItem: async (): Promise<void> => {
     if (typeof window === 'undefined') return;

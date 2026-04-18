@@ -111,9 +111,11 @@ function pushHistory(
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+let _hydrated = false;
 export let onSaveSuccess: (() => void) | null = null;
 
 function debouncedSupabaseSave(value: string) {
+  if (!_hydrated) return;
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async () => {
     try {
@@ -515,6 +517,7 @@ export const useVaultStore = create<VaultStore>()(
         if (typeof window === 'undefined') return supabaseStorage;
         return isSupabaseEnabled ? supabaseStorage : window.localStorage;
       }),
+      onRehydrateStorage: () => () => { _hydrated = true; },
     },
   ),
 );

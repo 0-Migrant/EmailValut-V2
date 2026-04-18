@@ -173,7 +173,7 @@ export default function Credentials() {
           </div>
           <div className="flex-row" style={{ marginBottom: 16, gap: 8, flexWrap: 'wrap' }}>
             <button className="btn btn-ghost btn-sm" onClick={() => downloadCredentials(false)}>
-              � Download All (PDF)
+              📄 Download All (PDF)
             </button>
             <button
               className="btn btn-ghost btn-sm"

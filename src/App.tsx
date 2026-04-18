@@ -39,9 +39,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'vault', filter: 'id=eq.1' },
         (payload) => {
-          const remote = (payload.new as { data?: unknown })?.data;
+          const remote = (payload.new as { data?: Record<string, unknown> })?.data;
           if (!remote) return;
-          useVaultStore.setState(remote as object, true);
+          const { items, categories, deliveryMen, orders, bundles, credentials, history, settings } = remote;
+          useVaultStore.setState({ items, categories, deliveryMen, orders, bundles, credentials, history, settings } as object);
         },
       )
       .subscribe();

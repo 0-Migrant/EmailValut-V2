@@ -12,6 +12,7 @@ export default function Credentials() {
   const updateCredential = useVaultStore((s) => s.updateCredential);
   const deleteCredential = useVaultStore((s) => s.deleteCredential);
   const addStock = useVaultStore((s) => s.addStock);
+  const updateStock = useVaultStore((s) => s.updateStock);
   const deleteStock = useVaultStore((s) => s.deleteStock);
   const { showConfirm } = useModal();
 
@@ -27,6 +28,7 @@ export default function Credentials() {
   const [expandingCred, setExpandingCred] = useState<string | null>(null);
   const [newStockName, setNewStockName] = useState('');
   const [newStockQty, setNewStockQty] = useState('');
+  const [editingStockQty, setEditingStockQty] = useState<Record<string, string>>({});
 
   function clearForm() {
     setEditId(null);
@@ -268,14 +270,39 @@ export default function Credentials() {
                               {!c.stocks.length ? (
                                 <div className="stock-empty">No stocks added yet.</div>
                               ) : (
-                                c.stocks.map((s) => (
-                                  <div key={s.id} className="stock-item">
-                                    <span className="stock-name">{s.name}</span>
-                                    <span className="stock-qty">{s.qty}</span>
-                                    <div className="stock-spacer"></div>
-                                    <button className="btn btn-danger btn-xs btn-icon" onClick={() => deleteStock(c.id, s.id)}>✕</button>
-                                  </div>
-                                ))
+                                c.stocks.map((s) => {
+                                  const key = `${c.id}-${s.id}`;
+                                  const editing = editingStockQty[key] !== undefined;
+                                  return (
+                                    <div key={s.id} className="stock-item">
+                                      <span className="stock-name">{s.name}</span>
+                                      <button className="btn btn-ghost btn-xs btn-icon" onClick={() => updateStock(c.id, s.id, { qty: Math.max(0, s.qty - 1) })}>−</button>
+                                      {editing ? (
+                                        <input
+                                          className="stock-inp stock-inp-qty"
+                                          type="number"
+                                          value={editingStockQty[key]}
+                                          autoFocus
+                                          onChange={(e) => setEditingStockQty((prev) => ({ ...prev, [key]: e.target.value }))}
+                                          onBlur={() => {
+                                            const v = parseInt(editingStockQty[key]);
+                                            if (!isNaN(v)) updateStock(c.id, s.id, { qty: Math.max(0, v) });
+                                            setEditingStockQty((prev) => { const n = { ...prev }; delete n[key]; return n; });
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                                            if (e.key === 'Escape') setEditingStockQty((prev) => { const n = { ...prev }; delete n[key]; return n; });
+                                          }}
+                                        />
+                                      ) : (
+                                        <span className="stock-qty" style={{ cursor: 'pointer', textDecoration: 'underline dotted' }} title="Click to edit" onClick={() => setEditingStockQty((prev) => ({ ...prev, [key]: String(s.qty) }))}>{s.qty}</span>
+                                      )}
+                                      <button className="btn btn-ghost btn-xs btn-icon" onClick={() => updateStock(c.id, s.id, { qty: s.qty + 1 })}>+</button>
+                                      <div className="stock-spacer"></div>
+                                      <button className="btn btn-danger btn-xs btn-icon" onClick={() => deleteStock(c.id, s.id)}>✕</button>
+                                    </div>
+                                  );
+                                })
                               )}
                             </div>
                             <div className="stock-add-form">

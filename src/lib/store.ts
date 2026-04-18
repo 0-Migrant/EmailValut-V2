@@ -111,11 +111,8 @@ function pushHistory(
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
-let _lastWriteAt = 0;
-export const getLastWriteAt = () => _lastWriteAt;
 
 function debouncedSupabaseSave(value: string) {
-  _lastWriteAt = Date.now();
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async () => {
     try {
@@ -125,7 +122,11 @@ function debouncedSupabaseSave(value: string) {
         console.warn('Supabase setItem failed, falling back to localStorage:', error);
         window.localStorage.setItem('vault_state', value);
       } else {
-        _lastWriteAt = Date.now();
+        supabase!.channel('vault-broadcast').send({
+          type: 'broadcast',
+          event: 'data_updated',
+          payload: {},
+        });
       }
     } catch (err) {
       console.warn('Failed to save vault data to Supabase, falling back to localStorage:', err);

@@ -128,6 +128,9 @@ export default function NewOrder() {
     const validItems = orderItems.filter((oi) => oi.qty > 0);
     if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
     const cp2 = customPrice !== '' && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : null;
+    // Count BEFORE adding so we can check if this new order hits a milestone
+    const prevCount = customerId ? orders.filter((o) => o.customerId === customerId).length : 0;
+
     addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2 });
 
     // Decrement stock for every consumed stock item
@@ -138,9 +141,9 @@ export default function NewOrder() {
     });
 
     if (customerId) {
-      const prevCount = orders.filter((o) => o.customerId === customerId).length;
-      if (isLoyaltyMilestone(prevCount)) {
-        showLoyalty(customerId, prevCount);
+      const newCount = prevCount + 1;
+      if (isLoyaltyMilestone(newCount)) {
+        showLoyalty(customerId, newCount);
       }
     }
     navigate('/orders');

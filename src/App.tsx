@@ -53,7 +53,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ModalProvider>
-      <Topbar />
+      <Topbar onMenuClick={() => setSidebarOpen(true)} />
       <div className="app-shell">
         <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="page-content">{children}</div>

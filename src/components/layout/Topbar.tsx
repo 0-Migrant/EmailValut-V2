@@ -1,6 +1,6 @@
 import { useVaultStore } from '@/lib/store';
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const theme = useVaultStore((s) => s.settings.theme);
   const updateSettings = useVaultStore((s) => s.updateSettings);
 
@@ -17,6 +17,7 @@ export default function Topbar() {
 
   return (
     <div className="topbar">
+      <button className="menu-btn" onClick={onMenuClick} aria-label="Open menu">☰</button>
       <div className="brand">
         <img src="/logo.png" alt="Instant-Play" className="brand-logo" />
         <span className="brand-name">Instant-Play</span>

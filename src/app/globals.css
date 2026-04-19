@@ -1124,10 +1124,6 @@ input[type=radio] {
 }
 
 @media(max-width:620px) {
-  .sidebar {
-    display: none
-  }
-
   .grid-4,
   .grid-3,
   .grid-2 {
@@ -1253,6 +1249,19 @@ body.dark .badge-waiting {
    RESPONSIVE — MOBILE FIRST IMPROVEMENTS
 ═══════════════════════════════════════════════════════════ */
 
+/* Hamburger menu button — hidden on desktop */
+.menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--text-main);
+  padding: 4px 8px;
+  margin-right: 4px;
+  line-height: 1
+}
+
 /* Mobile sidebar overlay toggle */
 .sidebar-overlay {
   display: none;
@@ -1331,6 +1340,12 @@ body.dark .badge-waiting {
 
   /* Category chips wrap well */
   .category-chips { gap: 8px }
+
+  /* Show hamburger on mobile */
+  .menu-btn { display: flex; align-items: center }
+
+  /* Modal action buttons wrap on small screens */
+  .modal-actions { flex-wrap: wrap }
 }
 
 /* ── 480px (small phones) ── */

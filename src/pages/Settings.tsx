@@ -125,15 +125,13 @@ export default function Settings() {
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
           Backup your data locally or import an existing JSON backup. Exported data includes all items, orders, and credentials.
         </p>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="data-mgmt-row">
           <button className="btn btn-ghost" onClick={exportBackup}>📤 Export JSON Backup</button>
-          
+
           <div style={{ position: 'relative' }}>
             <button className="btn btn-ghost" onClick={() => document.getElementById('import-file')?.click()}>📥 Import JSON Backup</button>
             <input id="import-file" type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
           </div>
-
-          <div style={{ flex: 1 }}></div>
 
           <button className="btn btn-danger" onClick={handleReset}>🛑 Factory Reset</button>
         </div>

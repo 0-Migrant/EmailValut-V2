@@ -85,7 +85,9 @@ body {
 .app-shell {
   display: flex;
   flex: 1;
-  min-height: 0
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden
 }
 
 .sidebar {
@@ -147,7 +149,9 @@ body {
 .page-content {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
   padding: 24px;
+  overflow-x: hidden;
   overflow-y: auto
 }
 
@@ -230,6 +234,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 20px 22px;
+  min-width: 0;
+  max-width: 100%;
   transition: background .2s, border-color .2s
 }
 
@@ -252,20 +258,27 @@ body {
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px
+  gap: 16px;
+  min-width: 0
 }
 
 .grid-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px
+  gap: 16px;
+  min-width: 0
 }
 
 .grid-4 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 16px
+  gap: 16px;
+  min-width: 0
 }
+
+.grid-2 > *,
+.grid-3 > *,
+.grid-4 > * { min-width: 0 }
 
 .flex-row {
   display: flex;
@@ -435,7 +448,9 @@ textarea.inp {
 
 /* TABLE */
 .table-wrap {
-  overflow-x: auto
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%
 }
 
 table {
@@ -596,6 +611,7 @@ body.dark .badge-info {
 
 .modal-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
   margin-top: 20px
@@ -1073,7 +1089,13 @@ input[type=radio] {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--border-row)
+  border-bottom: 1px solid var(--border-row);
+  min-width: 0
+}
+
+.setting-row > div:first-child {
+  min-width: 0;
+  flex: 1
 }
 
 .setting-row:last-child {
@@ -1295,6 +1317,14 @@ body.dark .badge-waiting {
   margin-bottom: 10px
 }
 
+/* Data management button row in Settings */
+.data-mgmt-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center
+}
+
 /* Category add row in Items page */
 .cat-add-row {
   display: flex;
@@ -1458,6 +1488,4 @@ body.dark .badge-waiting {
   .status-grid { grid-template-columns: 1fr 1fr }
 }
 
-/* Prevent full-page horizontal scroll — tables scroll inside .table-wrap only */
-body { overflow-x: hidden }
 

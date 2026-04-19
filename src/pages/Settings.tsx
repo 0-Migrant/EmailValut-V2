@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 
 export default function Settings() {
   const settings = useVaultStore((s) => s.settings);
   const updateSettings = useVaultStore((s) => s.updateSettings);
+  const [newPayment, setNewPayment] = useState('');
+  const [newPlatform, setNewPlatform] = useState('');
   const nukeAll = useVaultStore((s) => s.nukeAll);
   const importData = useVaultStore((s) => s.importData);
   const state = useVaultStore((s) => s);
@@ -132,6 +135,92 @@ export default function Settings() {
           <div style={{ flex: 1 }}></div>
 
           <button className="btn btn-danger" onClick={handleReset}>🛑 Factory Reset</button>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="card-title">Order Configuration</div>
+
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          {/* Payment Methods */}
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div className="setting-label" style={{ marginBottom: 8 }}>Payment Methods</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+              {(settings.paymentMethods ?? []).map((m) => (
+                <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ flex: 1, fontSize: 13 }}>{m}</span>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    style={{ padding: '2px 8px', fontSize: 12 }}
+                    onClick={() => updateSettings({ paymentMethods: settings.paymentMethods.filter((x) => x !== m) })}
+                  >×</button>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                className="inp"
+                style={{ flex: 1 }}
+                placeholder="New method..."
+                value={newPayment}
+                onChange={(e) => setNewPayment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newPayment.trim()) {
+                    updateSettings({ paymentMethods: [...(settings.paymentMethods ?? []), newPayment.trim()] });
+                    setNewPayment('');
+                  }
+                }}
+              />
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  if (!newPayment.trim()) return;
+                  updateSettings({ paymentMethods: [...(settings.paymentMethods ?? []), newPayment.trim()] });
+                  setNewPayment('');
+                }}
+              >Add</button>
+            </div>
+          </div>
+
+          {/* Order Platforms */}
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div className="setting-label" style={{ marginBottom: 8 }}>Order Platforms</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+              {(settings.platforms ?? []).map((p) => (
+                <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ flex: 1, fontSize: 13 }}>{p}</span>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    style={{ padding: '2px 8px', fontSize: 12 }}
+                    onClick={() => updateSettings({ platforms: settings.platforms.filter((x) => x !== p) })}
+                  >×</button>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                className="inp"
+                style={{ flex: 1 }}
+                placeholder="New platform..."
+                value={newPlatform}
+                onChange={(e) => setNewPlatform(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newPlatform.trim()) {
+                    updateSettings({ platforms: [...(settings.platforms ?? []), newPlatform.trim()] });
+                    setNewPlatform('');
+                  }
+                }}
+              />
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  if (!newPlatform.trim()) return;
+                  updateSettings({ platforms: [...(settings.platforms ?? []), newPlatform.trim()] });
+                  setNewPlatform('');
+                }}
+              >Add</button>
+            </div>
+          </div>
         </div>
       </div>
     </>

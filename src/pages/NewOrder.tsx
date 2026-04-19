@@ -15,11 +15,15 @@ export default function NewOrder() {
   const credentials   = useVaultStore((s) => s.credentials);
   const addOrder      = useVaultStore((s) => s.addOrder);
   const consumeStock  = useVaultStore((s) => s.consumeStock);
+  const settings      = useVaultStore((s) => s.settings);
 
-  const [dmId,        setDmId]        = useState('');
-  const [customerId,  setCustomerId]  = useState('');
-  const [orderItems,  setOrderItems]  = useState<OrderItem[]>([]);
-  const [customPrice, setCustomPrice] = useState('');
+  const [dmId,           setDmId]           = useState('');
+  const [customerId,     setCustomerId]     = useState('');
+  const [orderItems,     setOrderItems]     = useState<OrderItem[]>([]);
+  const [customPrice,    setCustomPrice]    = useState('');
+  const [discountPctStr, setDiscountPctStr] = useState('');
+  const [paymentMethod,  setPaymentMethod]  = useState('');
+  const [source,         setSource]         = useState('');
 
   // Selected credential IDs for resource accounts
   const [selectedCredIds, setSelectedCredIds] = useState<Set<string>>(new Set());
@@ -27,11 +31,14 @@ export default function NewOrder() {
 
   // Derived totals
   const itemsTotal = orderItems.reduce((a, oi) => a + oi.price * oi.qty, 0);
-  const cp = customPrice !== '' ? parseFloat(customPrice) : NaN;
-  const finalTotal = !isNaN(cp) && cp >= 0 ? cp : itemsTotal;
+  const cp  = customPrice !== '' ? parseFloat(customPrice) : NaN;
+  const dp  = discountPctStr !== '' ? parseFloat(discountPctStr) : NaN;
+  const cpActive = !isNaN(cp) && cp >= 0;
+  const dpActive = !cpActive && !isNaN(dp) && dp > 0 && dp <= 100;
+  const finalTotal = cpActive ? cp : dpActive ? itemsTotal * (1 - dp / 100) : itemsTotal;
 
-  const showDiscount  = !isNaN(cp) && cp >= 0 && itemsTotal > 0 && cp < itemsTotal;
-  const showSurcharge = !isNaN(cp) && cp >= 0 && itemsTotal > 0 && cp > itemsTotal;
+  const showDiscount  = cpActive && itemsTotal > 0 && cp < itemsTotal;
+  const showSurcharge = cpActive && itemsTotal > 0 && cp > itemsTotal;
   const discountPct   = showDiscount  ? ((itemsTotal - cp) / itemsTotal * 100).toFixed(1) : '';
   const surchargePct  = showSurcharge ? ((cp - itemsTotal) / itemsTotal * 100).toFixed(1) : '';
 
@@ -128,10 +135,11 @@ export default function NewOrder() {
     const validItems = orderItems.filter((oi) => oi.qty > 0);
     if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
     const cp2 = customPrice !== '' && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : null;
+    const dp2 = discountPctStr !== '' && !isNaN(parseFloat(discountPctStr)) ? parseFloat(discountPctStr) : null;
     // Count BEFORE adding so we can check if this new order hits a milestone
     const prevCount = customerId ? orders.filter((o) => o.customerId === customerId).length : 0;
 
-    addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2 });
+    addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2, discountPct: dp2, paymentMethod, source });
 
     // Decrement stock for every consumed stock item
     validItems.forEach((oi) => {
@@ -177,6 +185,20 @@ export default function NewOrder() {
             <div className="field">
               <label>Customer ID <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional — loyalty tracking)</span></label>
               <input className="inp" value={customerId} onChange={(e) => setCustomerId(e.target.value)} placeholder="e.g. CUST-001" />
+            </div>
+            <div className="field">
+              <label>Payment Method <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
+              <select className="inp" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                <option value="">— Select method —</option>
+                {(settings.paymentMethods ?? []).map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Order Source <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
+              <select className="inp" value={source} onChange={(e) => setSource(e.target.value)}>
+                <option value="">— Select source —</option>
+                {(settings.platforms ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
           </div>
         </div>
@@ -327,11 +349,31 @@ export default function NewOrder() {
             <span style={{ fontSize:15, fontWeight:600 }}>{fmt(itemsTotal)} $ USD</span>
           </div>
 
-          <div className="field" style={{ margin:'10px 0' }}>
-            <label>Custom Price <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional — overrides items total)</span></label>
-            <input className="inp" type="number" min={0} step={0.01} placeholder="0.00"
-              value={customPrice} onChange={(e) => setCustomPrice(e.target.value)} />
+          <div style={{ display:'flex', gap:10, margin:'10px 0' }}>
+            <div className="field" style={{ flex:1 }}>
+              <label>Custom Price <span style={{ fontSize:11, color:'var(--text-hint)' }}>(overrides total)</span></label>
+              <input className="inp" type="number" min={0} step={0.01} placeholder="0.00"
+                value={customPrice} onChange={(e) => { setCustomPrice(e.target.value); if (e.target.value) setDiscountPctStr(''); }} />
+            </div>
+            <div className="field" style={{ flex:1 }}>
+              <label>Discount % <span style={{ fontSize:11, color:'var(--text-hint)' }}>(applied on subtotal)</span></label>
+              <input className="inp" type="number" min={0} max={100} step={0.1} placeholder="0"
+                value={discountPctStr} onChange={(e) => { setDiscountPctStr(e.target.value); if (e.target.value) setCustomPrice(''); }} />
+            </div>
           </div>
+
+          {dpActive && (
+            <div style={{ background:'var(--green-bg)', border:'1px solid var(--green-border)', borderRadius:8, padding:10, marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:13, color:'var(--green)', fontWeight:600 }}>🏷 Discount Applied</span>
+                <span style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>-{dp.toFixed(1)}%</span>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginTop:6, fontSize:12, color:'var(--text-muted)' }}>
+                <span>Customer saves:</span>
+                <span style={{ fontWeight:600, color:'var(--green)' }}>{fmt(itemsTotal - finalTotal)} $ USD</span>
+              </div>
+            </div>
+          )}
 
           {showDiscount && (
             <div style={{ background:'var(--green-bg)', border:'1px solid var(--green-border)', borderRadius:8, padding:10, marginBottom:8 }}>

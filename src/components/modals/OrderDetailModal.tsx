@@ -10,7 +10,8 @@ export default function OrderDetailModal() {
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
   const items       = useVaultStore((s) => s.items);
   const setStatus   = useVaultStore((s) => s.setOrderStatus);
-  const [showUnitPrice, setShowUnitPrice] = useState(true);
+  const [showUnitPrice, setShowUnitPrice] = useState(false);
+  const [showDiscount,  setShowDiscount]  = useState(true);
 
   if (!viewOrderId) return null;
   const order = orders.find((o) => o.id === viewOrderId);
@@ -40,6 +41,14 @@ export default function OrderDetailModal() {
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Customer ID</div>
             <div style={{ fontWeight: 600 }}>{order.customerId || '—'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Payment Method</div>
+            <div style={{ fontWeight: 600 }}>{order.paymentMethod || '—'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Order Source</div>
+            <div style={{ fontWeight: 600 }}>{order.source || '—'}</div>
           </div>
         </div>
 
@@ -90,15 +99,19 @@ export default function OrderDetailModal() {
           <span className={`badge ${statusBadgeClass(order.status)}`}>{order.status}</span>
         </div>
 
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 10, display: 'flex', gap: 16 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>
             <input type="checkbox" checked={showUnitPrice} onChange={(e) => setShowUnitPrice(e.target.checked)} />
             Show unit price in PDF
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <input type="checkbox" checked={showDiscount} onChange={(e) => setShowDiscount(e.target.checked)} />
+            Show discount in PDF
+          </label>
         </div>
 
         <div className="modal-actions">
-          <button className="btn btn-primary btn-sm" onClick={() => void generateOrderPDF(order!, items, dm, showUnitPrice)}>
+          <button className="btn btn-primary btn-sm" onClick={() => void generateOrderPDF(order!, items, dm, showUnitPrice, showDiscount)}>
             📥 Download PDF
           </button>
           {order.status === 'waiting' && <>

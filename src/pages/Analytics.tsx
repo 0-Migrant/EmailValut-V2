@@ -2,9 +2,8 @@ import { useVaultStore } from '@/lib/store';
 import { fmt, orderTotal } from '@/lib/utils';
 
 export default function Analytics() {
-  const orders      = useVaultStore((s) => s.orders);
-  const items       = useVaultStore((s) => s.items);
-  const deliveryMen = useVaultStore((s) => s.deliveryMen);
+  const orders = useVaultStore((s) => s.orders);
+  const items  = useVaultStore((s) => s.items);
 
   const done  = orders.filter((o) => o.status === 'done');
   const now   = new Date();
@@ -31,11 +30,6 @@ export default function Analytics() {
   const topItems = Object.entries(itemRev).sort((a, b) => b[1] - a[1]).slice(0, 6)
     .map(([id, val]) => ({ item: items.find((i) => i.id === id), val })).filter((x) => x.item);
   const maxIR = Math.max(...topItems.map((x) => x.val), 1);
-
-  // DM revenue
-  const dmRev: Record<string, number> = {};
-  done.forEach((o) => { dmRev[o.deliveryManId] = (dmRev[o.deliveryManId] || 0) + orderTotal(o); });
-  const maxDM = Math.max(...Object.values(dmRev), 1);
 
   const allStatuses = ['waiting', 'pending', 'done', 'cancelled'] as const;
   const statusColors: Record<string, string> = { done:'var(--green)', cancelled:'var(--red)', waiting:'var(--accent)', pending:'var(--orange)' };
@@ -95,36 +89,22 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="grid-2" style={{ marginBottom:20 }}>
-        <div className="card">
-          <div className="card-title">🚚 Revenue by Delivery Man</div>
-          <div className="chart-bar-wrap">
-            {deliveryMen.length
-              ? deliveryMen.map((dm) => (
-                  <div key={dm.id} className="chart-bar-row">
-                    <div className="chart-bar-label">{dm.name.split(' ')[0]}</div>
-                    <Bar val={dmRev[dm.id] || 0} max={maxDM} color="var(--green)" />
-                    <div className="chart-bar-val">{fmt(dmRev[dm.id] || 0)}</div>
-                  </div>
-                ))
-              : <div className="empty-state" style={{ padding:16 }}>No data</div>}
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-title">📦 Order Status Breakdown</div>
-          <div className="grid-2">
-            {allStatuses.map((s) => {
-              const cnt = orders.filter((o) => o.status === s).length;
-              const pct = Math.round(cnt / (orders.length || 1) * 100);
-              return (
-                <div key={s} style={{ textAlign:'center', padding:12 }}>
-                  <div style={{ fontSize:32, fontWeight:800, color: statusColors[s] }}>{cnt}</div>
-                  <div style={{ fontSize:13, color:'var(--text-muted)', marginTop:4, textTransform:'capitalize' }}>{s}</div>
-                  <div style={{ fontSize:11, color:'var(--text-hint)' }}>{pct}% of all</div>
-                </div>
-              );
-            })}
-          </div>
+      <div className="card" style={{ marginBottom:20 }}>
+        <div className="card-title">📦 Order Status Breakdown</div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8 }}>
+          {allStatuses.map((s) => {
+            const cnt    = orders.filter((o) => o.status === s).length;
+            const pct    = Math.round(cnt / (orders.length || 1) * 100);
+            const revenue = rev(orders.filter((o) => o.status === s) as typeof done);
+            return (
+              <div key={s} style={{ textAlign:'center', padding:16, borderRadius:8, background:'var(--bg-card-inner, var(--bg-2))', border:'1px solid var(--border)' }}>
+                <div style={{ fontSize:36, fontWeight:800, color: statusColors[s] }}>{cnt}</div>
+                <div style={{ fontSize:13, color:'var(--text-muted)', marginTop:4, textTransform:'capitalize', fontWeight:600 }}>{s}</div>
+                <div style={{ fontSize:11, color:'var(--text-hint)', marginTop:2 }}>{pct}% of all</div>
+                {revenue > 0 && <div style={{ fontSize:12, color: statusColors[s], marginTop:6, fontWeight:600 }}>{fmt(revenue)} $</div>}
+              </div>
+            );
+          })}
         </div>
       </div>
     </>

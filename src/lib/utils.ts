@@ -53,14 +53,18 @@ export function orderItemsTotal(order: Pick<Order, 'items'>): number {
   return (order.items ?? []).reduce((a: number, oi: OrderItem) => a + oi.price * oi.qty, 0);
 }
 
-export function orderTotal(order: Pick<Order, 'items' | 'customPrice'>): number {
+export function orderTotal(order: Pick<Order, 'items' | 'customPrice' | 'discountPct'>): number {
+  const itemsTotal = orderItemsTotal(order);
   if (order.customPrice !== null && order.customPrice !== undefined && order.customPrice >= 0) {
     return order.customPrice;
   }
-  return orderItemsTotal(order);
+  if (order.discountPct !== null && order.discountPct !== undefined && order.discountPct > 0) {
+    return itemsTotal * (1 - order.discountPct / 100);
+  }
+  return itemsTotal;
 }
 
-export function getPriceInfo(order: Pick<Order, 'items' | 'customPrice'>): PriceInfo {
+export function getPriceInfo(order: Pick<Order, 'items' | 'customPrice' | 'discountPct'>): PriceInfo {
   const itemsTotal = orderItemsTotal(order);
   const cp = order.customPrice;
 
@@ -77,6 +81,14 @@ export function getPriceInfo(order: Pick<Order, 'items' | 'customPrice'>): Price
     }
     return { type: 'normal', total: cp, itemsTotal };
   }
+
+  const dp = order.discountPct;
+  if (dp !== null && dp !== undefined && dp > 0) {
+    const total = itemsTotal * (1 - dp / 100);
+    const saved = itemsTotal - total;
+    return { type: 'discount', total, saved, pct: dp.toFixed(1), itemsTotal };
+  }
+
   return { type: 'normal', total: itemsTotal, itemsTotal };
 }
 

@@ -16,7 +16,7 @@ async function loadLogoBase64(): Promise<string | null> {
   }
 }
 
-export async function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan, showUnitPrice = true) {
+export async function generateOrderPDF(order: Order, items: Item[], dm?: DeliveryMan, showUnitPrice = false, showDiscount = true) {
   const doc = new jsPDF();
   const logo = await loadLogoBase64();
   const info = getPriceInfo(order);
@@ -95,9 +95,11 @@ export async function generateOrderPDF(order: Order, items: Item[], dm?: Deliver
   doc.text(`Customer ID: ${order.customerId || 'Walk-in Customer'}`, 14, y);
   y += 6;
   doc.text(`Delivery Assigned: ${dm?.name || 'Not assigned'}`, 14, y);
+  y += 6;
+  doc.text(`Payment Method: ${order.paymentMethod || '—'}`, 14, y);
 
   // Items table
-  y = 115;
+  y = 122;
   
   // Table header background
   doc.setFillColor(primary[0], primary[1], primary[2]);
@@ -162,18 +164,20 @@ export async function generateOrderPDF(order: Order, items: Item[], dm?: Deliver
   y += 7;
 
   // Discount or surcharge
-  if (info.type === 'discount') {
-    doc.setTextColor(green[0], green[1], green[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Discount (-${info.pct}%)`, 130, y);
-    doc.text(`-$${fmt(info.saved)}`, 170, y);
-    y += 7;
-  } else if (info.type === 'surcharge') {
-    doc.setTextColor(orange[0], orange[1], orange[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Premium Surcharge (+${info.pct}%)`, 130, y);
-    doc.text(`+$${fmt(info.extra)}`, 170, y);
-    y += 7;
+  if (showDiscount) {
+    if (info.type === 'discount') {
+      doc.setTextColor(green[0], green[1], green[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Discount (-${info.pct}%)`, 130, y);
+      doc.text(`-$${fmt(info.saved)}`, 170, y);
+      y += 7;
+    } else if (info.type === 'surcharge') {
+      doc.setTextColor(orange[0], orange[1], orange[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Premium Surcharge (+${info.pct}%)`, 130, y);
+      doc.text(`+$${fmt(info.extra)}`, 170, y);
+      y += 7;
+    }
   }
 
   // Grand total

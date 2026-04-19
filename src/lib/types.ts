@@ -40,6 +40,9 @@ export interface Order {
   items: OrderItem[];
   status: OrderStatus;
   customPrice: number | null;
+  discountPct: number | null;
+  paymentMethod: string;
+  source: string;
   createdAt: string;
 }
 
@@ -77,6 +80,8 @@ export interface Settings {
   historyretention: number;
   historylimit: number;
   theme: 'light' | 'dark';
+  paymentMethods: string[];
+  platforms: string[];
 }
 
 export interface BundleItem {

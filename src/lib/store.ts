@@ -88,6 +88,8 @@ const DEFAULT_SETTINGS: Settings = {
   historyretention: 7,
   historylimit: 50,
   theme: 'light',
+  paymentMethods: ['Cash', 'Card', 'Bank Transfer'],
+  platforms: ['WhatsApp', 'Instagram', 'Phone Call', 'Walk-in', 'Discord'],
 };
 
 // ─── Helper: add history entry ────────────────────────────────────────────────

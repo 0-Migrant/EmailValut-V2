@@ -5,8 +5,9 @@ import { useModal } from '@/context/ModalContext';
 export default function Settings() {
   const settings = useVaultStore((s) => s.settings);
   const updateSettings = useVaultStore((s) => s.updateSettings);
-  const [newPayment, setNewPayment] = useState('');
-  const [newPlatform, setNewPlatform] = useState('');
+  const [pmLabel,      setPmLabel]      = useState('');
+  const [pmDetail,     setPmDetail]     = useState('');
+  const [newPlatform,  setNewPlatform]  = useState('');
   const nukeAll = useVaultStore((s) => s.nukeAll);
   const importData = useVaultStore((s) => s.importData);
   const state = useVaultStore((s) => s);
@@ -143,40 +144,49 @@ export default function Settings() {
 
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           {/* Payment Methods */}
-          <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
             <div className="setting-label" style={{ marginBottom: 8 }}>Payment Methods</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
               {(settings.paymentMethods ?? []).map((m) => (
-                <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ flex: 1, fontSize: 13 }}>{m}</span>
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-2, var(--bg))' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</div>
+                    {m.detail && <div style={{ fontSize: 11, color: 'var(--text-hint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.detail}</div>}
+                  </div>
                   <button
                     className="btn btn-danger btn-sm"
-                    style={{ padding: '2px 8px', fontSize: 12 }}
-                    onClick={() => updateSettings({ paymentMethods: settings.paymentMethods.filter((x) => x !== m) })}
+                    style={{ padding: '2px 8px', fontSize: 12, flexShrink: 0 }}
+                    onClick={() => updateSettings({ paymentMethods: settings.paymentMethods.filter((x) => x.id !== m.id) })}
                   >×</button>
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <input
                 className="inp"
-                style={{ flex: 1 }}
-                placeholder="New method..."
-                value={newPayment}
-                onChange={(e) => setNewPayment(e.target.value)}
+                placeholder="Label (e.g. PayPal, Binance, USDT)..."
+                value={pmLabel}
+                onChange={(e) => setPmLabel(e.target.value)}
+              />
+              <input
+                className="inp"
+                placeholder="Account / address / email / URL..."
+                value={pmDetail}
+                onChange={(e) => setPmDetail(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newPayment.trim()) {
-                    updateSettings({ paymentMethods: [...(settings.paymentMethods ?? []), newPayment.trim()] });
-                    setNewPayment('');
+                  if (e.key === 'Enter' && pmLabel.trim()) {
+                    updateSettings({ paymentMethods: [...(settings.paymentMethods ?? []), { id: `pm-${Date.now()}`, label: pmLabel.trim(), detail: pmDetail.trim() }] });
+                    setPmLabel(''); setPmDetail('');
                   }
                 }}
               />
               <button
                 className="btn btn-ghost"
+                style={{ alignSelf: 'flex-start' }}
                 onClick={() => {
-                  if (!newPayment.trim()) return;
-                  updateSettings({ paymentMethods: [...(settings.paymentMethods ?? []), newPayment.trim()] });
-                  setNewPayment('');
+                  if (!pmLabel.trim()) return;
+                  updateSettings({ paymentMethods: [...(settings.paymentMethods ?? []), { id: `pm-${Date.now()}`, label: pmLabel.trim(), detail: pmDetail.trim() }] });
+                  setPmLabel(''); setPmDetail('');
                 }}
               >Add</button>
             </div>

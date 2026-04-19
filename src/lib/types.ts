@@ -42,6 +42,7 @@ export interface Order {
   customPrice: number | null;
   discountPct: number | null;
   paymentMethod: string;
+  paymentDetail: string;
   source: string;
   createdAt: string;
 }
@@ -73,6 +74,12 @@ export interface HistoryEntry {
   snapshot?: string;
 }
 
+export interface PaymentMethod {
+  id: string;
+  label: string;
+  detail: string;
+}
+
 export interface Settings {
   showpass: boolean;
   confirmdelete: boolean;
@@ -80,7 +87,7 @@ export interface Settings {
   historyretention: number;
   historylimit: number;
   theme: 'light' | 'dark';
-  paymentMethods: string[];
+  paymentMethods: PaymentMethod[];
   platforms: string[];
 }
 

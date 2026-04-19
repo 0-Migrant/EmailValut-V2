@@ -45,6 +45,7 @@ export default function OrderDetailModal() {
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Payment Method</div>
             <div style={{ fontWeight: 600 }}>{order.paymentMethod || '—'}</div>
+            {order.paymentDetail && <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>{order.paymentDetail}</div>}
           </div>
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Order Source</div>

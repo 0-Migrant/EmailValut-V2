@@ -88,7 +88,11 @@ const DEFAULT_SETTINGS: Settings = {
   historyretention: 7,
   historylimit: 50,
   theme: 'light',
-  paymentMethods: ['Cash', 'Card', 'Bank Transfer'],
+  paymentMethods: [
+    { id: 'pm-1', label: 'Cash', detail: '' },
+    { id: 'pm-2', label: 'PayPal', detail: '' },
+    { id: 'pm-3', label: 'Binance', detail: '' },
+  ],
   platforms: ['WhatsApp', 'Instagram', 'Phone Call', 'Walk-in', 'Discord'],
 };
 

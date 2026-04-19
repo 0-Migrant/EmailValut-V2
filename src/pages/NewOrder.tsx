@@ -22,8 +22,8 @@ export default function NewOrder() {
   const [orderItems,     setOrderItems]     = useState<OrderItem[]>([]);
   const [customPrice,    setCustomPrice]    = useState('');
   const [discountPctStr, setDiscountPctStr] = useState('');
-  const [paymentMethod,  setPaymentMethod]  = useState('');
-  const [source,         setSource]         = useState('');
+  const [paymentMethodId, setPaymentMethodId] = useState('');
+  const [source,          setSource]          = useState('');
 
   // Selected credential IDs for resource accounts
   const [selectedCredIds, setSelectedCredIds] = useState<Set<string>>(new Set());
@@ -139,7 +139,8 @@ export default function NewOrder() {
     // Count BEFORE adding so we can check if this new order hits a milestone
     const prevCount = customerId ? orders.filter((o) => o.customerId === customerId).length : 0;
 
-    addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2, discountPct: dp2, paymentMethod, source });
+    const selectedPm = (settings.paymentMethods ?? []).find((m) => m.id === paymentMethodId);
+    addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2, discountPct: dp2, paymentMethod: selectedPm?.label ?? '', paymentDetail: selectedPm?.detail ?? '', source });
 
     // Decrement stock for every consumed stock item
     validItems.forEach((oi) => {
@@ -188,10 +189,13 @@ export default function NewOrder() {
             </div>
             <div className="field">
               <label>Payment Method <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
-              <select className="inp" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+              <select className="inp" value={paymentMethodId} onChange={(e) => setPaymentMethodId(e.target.value)}>
                 <option value="">— Select method —</option>
-                {(settings.paymentMethods ?? []).map((m) => <option key={m} value={m}>{m}</option>)}
+                {(settings.paymentMethods ?? []).map((m) => (
+                  <option key={m.id} value={m.id}>{m.label}{m.detail ? ` — ${m.detail}` : ''}</option>
+                ))}
               </select>
+              {paymentMethodId && (() => { const pm = (settings.paymentMethods ?? []).find((m) => m.id === paymentMethodId); return pm?.detail ? <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 3 }}>{pm.detail}</div> : null; })()}
             </div>
             <div className="field">
               <label>Order Source <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>

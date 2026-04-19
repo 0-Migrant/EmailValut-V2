@@ -96,7 +96,7 @@ export async function generateOrderPDF(order: Order, items: Item[], dm?: Deliver
   y += 6;
   doc.text(`Delivery Assigned: ${dm?.name || 'Not assigned'}`, 14, y);
   y += 6;
-  doc.text(`Payment Method: ${order.paymentMethod || '—'}`, 14, y);
+  doc.text(`Payment: ${order.paymentMethod || '—'}${order.paymentDetail ? ` — ${order.paymentDetail}` : ''}`, 14, y);
 
   // Items table
   y = 122;

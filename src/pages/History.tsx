@@ -31,10 +31,8 @@ export default function History() {
       <div className="section-title">🕐 System History</div>
 
       <div className="card" style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ display: 'flex', gap: 10, flex: 1 }}>
-            <input className="search-box" style={{ width: 300 }} placeholder="Search logs..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
+        <div className="history-toolbar">
+          <input className="search-box" placeholder="Search logs..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <button className="btn btn-danger btn-sm" onClick={() => showConfirm('Clear History', 'Delete all log history permanentely?', clearHistory)}>
             🗑 Clear All Logs
           </button>

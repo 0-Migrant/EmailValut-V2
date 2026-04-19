@@ -50,13 +50,13 @@ export default function Orders() {
     <>
       <div className="section-title">📋 Manage Orders</div>
 
-      <div className="flex-row" style={{ marginBottom:16, flexWrap:'wrap', gap:8 }}>
-        <input className="search-box" placeholder="Search by customer, delivery man..." style={{ minWidth:200, flex:1 }}
+      <div className="filter-bar orders-filter-bar">
+        <input className="search-box" placeholder="Search by customer, delivery man..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select className="inp" style={{ width:160 }} value={filter} onChange={(e) => setFilter(e.target.value)}>
+        <select className="inp" value={filter} onChange={(e) => setFilter(e.target.value)}>
           {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <select className="inp" style={{ width:180 }} value={dmFilter} onChange={(e) => setDmFilter(e.target.value)}>
+        <select className="inp" value={dmFilter} onChange={(e) => setDmFilter(e.target.value)}>
           <option value="">All Delivery Men</option>
           {deliveryMen.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>

@@ -91,7 +91,7 @@ export default function Analytics() {
 
       <div className="card" style={{ marginBottom:20 }}>
         <div className="card-title">📦 Order Status Breakdown</div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8 }}>
+        <div className="status-grid">
           {allStatuses.map((s) => {
             const cnt    = orders.filter((o) => o.status === s).length;
             const pct    = Math.round(cnt / (orders.length || 1) * 100);

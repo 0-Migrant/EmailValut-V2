@@ -33,7 +33,7 @@ export default function OrderDetailModal() {
           {fmtDateTime(order.createdAt)}
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="order-info-grid">
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Delivery Man</div>
             <div style={{ fontWeight: 600 }}>{dm?.name ?? 'Unknown'}</div>
@@ -100,7 +100,7 @@ export default function OrderDetailModal() {
           <span className={`badge ${statusBadgeClass(order.status)}`}>{order.status}</span>
         </div>
 
-        <div style={{ marginBottom: 10, display: 'flex', gap: 16 }}>
+        <div className="pdf-options">
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>
             <input type="checkbox" checked={showUnitPrice} onChange={(e) => setShowUnitPrice(e.target.checked)} />
             Show unit price in PDF

@@ -1249,6 +1249,60 @@ body.dark .badge-waiting {
    RESPONSIVE — MOBILE FIRST IMPROVEMENTS
 ═══════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE UTILITY CLASSES
+═══════════════════════════════════════════════════════════ */
+
+/* Filter toolbar — inputs/selects wrap naturally on mobile */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px
+}
+.filter-bar .search-box,
+.filter-bar .inp { flex: 1; min-width: 140px }
+
+/* History page toolbar */
+.history-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px
+}
+
+/* Analytics status breakdown grid */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px
+}
+
+/* Order detail modal info grid */
+.order-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px
+}
+
+/* PDF options row in order detail modal */
+.pdf-options {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 10px
+}
+
+/* Category add row in Items page */
+.cat-add-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: flex-end
+}
+
 /* Hamburger menu button — hidden on desktop */
 .menu-btn {
   display: none;
@@ -1374,5 +1428,36 @@ body.dark .badge-waiting {
   .flex-row { flex-wrap: wrap }
   .flex-row .inp,
   .flex-row .search-box { width: 100% !important; flex: unset !important }
+
+  /* filter-bar: full-width on small phones */
+  .filter-bar .search-box,
+  .filter-bar .inp { min-width: 0; width: 100% }
+
+  /* history toolbar stacks */
+  .history-toolbar { flex-direction: column; align-items: stretch }
+  .history-toolbar .search-box { width: 100% }
+
+  /* Analytics status: 1 col */
+  .status-grid { grid-template-columns: 1fr }
+
+  /* Order detail modal: 1 col */
+  .order-info-grid { grid-template-columns: 1fr }
+
+  /* Category add row stacks */
+  .cat-add-row { flex-direction: column; align-items: stretch }
+  .cat-add-row button { width: 100% }
 }
+
+/* ── 600px — orders filter selects ── */
+@media (max-width: 600px) {
+  .orders-filter-bar .inp { width: 100%; flex: 1 1 100% }
+}
+
+/* ── status-grid: 2 cols at 768px ── */
+@media (max-width: 768px) {
+  .status-grid { grid-template-columns: 1fr 1fr }
+}
+
+/* Prevent full-page horizontal scroll — tables scroll inside .table-wrap only */
+body { overflow-x: hidden }
 

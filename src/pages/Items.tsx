@@ -138,7 +138,7 @@ export default function Items() {
       {/* Category Management */}
       <div className="card">
         <div className="card-title">🏷 Manage Categories</div>
-        <div style={{ display:'flex', gap:10, marginBottom:16, alignItems:'flex-end' }}>
+        <div className="cat-add-row">
           <div className="field" style={{ flex:1, margin:0 }}>
             <label>New Category Name</label>
             <input className="inp" placeholder="e.g. Desserts" value={newCat}

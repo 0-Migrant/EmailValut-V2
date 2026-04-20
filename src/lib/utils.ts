@@ -96,10 +96,24 @@ export function getPriceInfo(order: Pick<Order, 'items' | 'customPrice' | 'disco
 
 export function statusBadgeClass(status: string): string {
   switch (status) {
-    case 'done':      return 'badge-done';
-    case 'cancelled': return 'badge-cancelled';
-    case 'waiting':   return 'badge-waiting';
-    default:          return 'badge-pending';
+    case 'done':             return 'badge-done';
+    case 'accepted':         return 'badge-accepted';
+    case 'delivered':        return 'badge-delivered';
+    case 'waiting_payment':  return 'badge-waiting-payment';
+    case 'payment_complete': return 'badge-payment-complete';
+    default:                 return 'badge-waiting';
+  }
+}
+
+export function statusLabel(status: string): string {
+  switch (status) {
+    case 'waiting':          return 'Waiting';
+    case 'accepted':         return 'Accepted';
+    case 'delivered':        return 'Delivered';
+    case 'waiting_payment':  return 'Waiting for Payment';
+    case 'payment_complete': return 'Payment Complete';
+    case 'done':             return 'Done';
+    default:                 return status;
   }
 }
 

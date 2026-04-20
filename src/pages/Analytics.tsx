@@ -1,5 +1,5 @@
 import { useVaultStore } from '@/lib/store';
-import { fmt, orderTotal } from '@/lib/utils';
+import { fmt, orderTotal, statusLabel } from '@/lib/utils';
 
 export default function Analytics() {
   const orders = useVaultStore((s) => s.orders);
@@ -31,8 +31,8 @@ export default function Analytics() {
     .map(([id, val]) => ({ item: items.find((i) => i.id === id), val })).filter((x) => x.item);
   const maxIR = Math.max(...topItems.map((x) => x.val), 1);
 
-  const allStatuses = ['waiting', 'pending', 'done', 'cancelled'] as const;
-  const statusColors: Record<string, string> = { done:'var(--green)', cancelled:'var(--red)', waiting:'var(--accent)', pending:'var(--orange)' };
+  const allStatuses = ['waiting', 'accepted', 'delivered', 'waiting_payment', 'payment_complete', 'done'] as const;
+  const statusColors: Record<string, string> = { done:'var(--green)', waiting:'#a16207', accepted:'var(--orange)', delivered:'var(--accent)', waiting_payment:'var(--purple)', payment_complete:'#0f766e' };
 
   function Bar({ val, max, color }: { val: number; max: number; color?: string }) {
     return (
@@ -99,7 +99,7 @@ export default function Analytics() {
             return (
               <div key={s} style={{ textAlign:'center', padding:16, borderRadius:8, background:'var(--bg-card-inner, var(--bg-2))', border:'1px solid var(--border)' }}>
                 <div style={{ fontSize:36, fontWeight:800, color: statusColors[s] }}>{cnt}</div>
-                <div style={{ fontSize:13, color:'var(--text-muted)', marginTop:4, textTransform:'capitalize', fontWeight:600 }}>{s}</div>
+                <div style={{ fontSize:13, color:'var(--text-muted)', marginTop:4, fontWeight:600 }}>{statusLabel(s)}</div>
                 <div style={{ fontSize:11, color:'var(--text-hint)', marginTop:2 }}>{pct}% of all</div>
                 {revenue > 0 && <div style={{ fontSize:12, color: statusColors[s], marginTop:6, fontWeight:600 }}>{fmt(revenue)} $</div>}
               </div>

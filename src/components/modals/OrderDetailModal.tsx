@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { useVaultStore } from '@/lib/store';
-import { fmt, fmtDateTime, orderTotal, orderItemsTotal, getPriceInfo, statusBadgeClass } from '@/lib/utils';
+import { fmt, fmtDateTime, orderTotal, orderItemsTotal, getPriceInfo, statusBadgeClass, statusLabel } from '@/lib/utils';
 import { generateOrderPDF } from '@/lib/pdf';
 
 export default function OrderDetailModal() {
@@ -20,7 +20,7 @@ export default function OrderDetailModal() {
   const dm   = deliveryMen.find((d) => d.id === order.deliveryManId);
   const info = getPriceInfo(order);
 
-  function handleStatus(status: 'pending' | 'done' | 'cancelled' | 'waiting') {
+  function handleStatus(status: 'waiting' | 'accepted' | 'delivered' | 'waiting_payment' | 'payment_complete' | 'done') {
     setStatus(order!.id, status);
     closeOrderDetail();
   }
@@ -97,7 +97,7 @@ export default function OrderDetailModal() {
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <span className={`badge ${statusBadgeClass(order.status)}`}>{order.status}</span>
+          <span className={`badge ${statusBadgeClass(order.status)}`}>{statusLabel(order.status)}</span>
         </div>
 
         <div className="pdf-options">
@@ -116,12 +116,26 @@ export default function OrderDetailModal() {
             📥 Download PDF
           </button>
           {order.status === 'waiting' && <>
-            <button className="btn btn-success btn-sm" onClick={() => handleStatus('pending')}>✓ Accept</button>
-            <button className="btn btn-danger btn-sm" onClick={() => handleStatus('cancelled')}>✗ Cancel</button>
+            <button className="btn btn-success btn-sm" onClick={() => handleStatus('accepted')}>✓ Accept</button>
           </>}
-          {order.status === 'pending' && <>
-            <button className="btn btn-success btn-sm" onClick={() => handleStatus('done')}>✓ Mark Done</button>
-            <button className="btn btn-danger btn-sm" onClick={() => handleStatus('cancelled')}>✗ Cancel</button>
+          {order.status === 'accepted' && <>
+            <button className="btn btn-success btn-sm" onClick={() => handleStatus('delivered')}>✓ Mark Delivered</button>
+            <button className="btn btn-ghost btn-sm"   onClick={() => handleStatus('waiting')}>↩ Back to Waiting</button>
+          </>}
+          {order.status === 'delivered' && <>
+            <button className="btn btn-success btn-sm" onClick={() => handleStatus('waiting_payment')}>✓ Awaiting Payment</button>
+            <button className="btn btn-ghost btn-sm"   onClick={() => handleStatus('accepted')}>↩ Back to Accepted</button>
+          </>}
+          {order.status === 'waiting_payment' && <>
+            <button className="btn btn-success btn-sm" onClick={() => handleStatus('payment_complete')}>✓ Payment Complete</button>
+            <button className="btn btn-ghost btn-sm"   onClick={() => handleStatus('delivered')}>↩ Back to Delivered</button>
+          </>}
+          {order.status === 'payment_complete' && <>
+            <button className="btn btn-success btn-sm" onClick={() => handleStatus('done')}>✓ Done</button>
+            <button className="btn btn-ghost btn-sm"   onClick={() => handleStatus('waiting_payment')}>↩ Back to Waiting for Payment</button>
+          </>}
+          {order.status === 'done' && <>
+            <button className="btn btn-ghost btn-sm" onClick={() => handleStatus('waiting')}>↩ Reset to Beginning</button>
           </>}
           <button className="btn btn-ghost btn-sm" onClick={closeOrderDetail}>Close</button>
         </div>

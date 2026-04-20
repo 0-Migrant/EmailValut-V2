@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
-import { fmt, fmtDateTime, orderTotal, getPriceInfo, statusBadgeClass } from '@/lib/utils';
+import { fmt, fmtDateTime, orderTotal, getPriceInfo, statusBadgeClass, statusLabel } from '@/lib/utils';
 import type { OrderStatus } from '@/lib/types';
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'all',       label: 'All Orders' },
-  { value: 'waiting',   label: 'Waiting' },
-  { value: 'pending',   label: 'Pending' },
-  { value: 'done',      label: 'Done' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'all',             label: 'All Orders' },
+  { value: 'waiting',         label: 'Waiting' },
+  { value: 'accepted',        label: 'Accepted' },
+  { value: 'delivered',       label: 'Delivered' },
+  { value: 'waiting_payment', label: 'Waiting for Payment' },
+  { value: 'payment_complete',label: 'Payment Complete' },
+  { value: 'done',            label: 'Done' },
 ];
 
 export default function Orders() {
@@ -94,19 +96,30 @@ export default function Orders() {
                           {info.type === 'discount'  && <span className="discount-badge">🏷 -{info.pct}%</span>}
                           {info.type === 'surcharge' && <span className="discount-badge" style={{ background:'var(--orange-bg)', color:'var(--orange)', borderColor:'var(--orange-border)' }}>📈 +{info.pct}%</span>}
                         </td>
-                        <td><span className={`badge ${statusBadgeClass(o.status)}`}>{o.status}</span></td>
+                        <td><span className={`badge ${statusBadgeClass(o.status)}`}>{statusLabel(o.status)}</span></td>
                         <td><span className="tag">{fmtDateTime(o.createdAt)}</span></td>
                         <td>
                           <div className="action-group">
                             {o.status === 'waiting' && <>
-                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'pending')}>✓ Accept</button>
-                              <button className="btn btn-danger btn-xs"  onClick={() => handleStatus(o.id,'cancelled')}>✗ Cancel</button>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'accepted')}>✓ Accept</button>
                             </>}
-                            {o.status === 'pending' && <>
+                            {o.status === 'accepted' && <>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'delivered')}>✓ Delivered</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'waiting')}>↩ Back</button>
+                            </>}
+                            {o.status === 'delivered' && <>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'waiting_payment')}>✓ Awaiting Payment</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'accepted')}>↩ Back</button>
+                            </>}
+                            {o.status === 'waiting_payment' && <>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'payment_complete')}>✓ Payment Complete</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'delivered')}>↩ Back</button>
+                            </>}
+                            {o.status === 'payment_complete' && <>
                               <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'done')}>✓ Done</button>
-                              <button className="btn btn-danger btn-xs"  onClick={() => handleStatus(o.id,'cancelled')}>✗ Cancel</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'waiting_payment')}>↩ Back</button>
                             </>}
-                            {(o.status === 'done' || o.status === 'cancelled') &&
+                            {o.status === 'done' &&
                               <button className="btn btn-ghost btn-xs" onClick={() => handleStatus(o.id,'waiting')}>↩ Reset</button>
                             }
                             <button className="btn btn-ghost btn-xs" onClick={() => openOrderDetail(o.id)}>View</button>

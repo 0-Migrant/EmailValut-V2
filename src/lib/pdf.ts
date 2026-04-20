@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { Order, Item, DeliveryMan, Credential } from './types';
-import { fmt, fmtDateTime, orderTotal, getPriceInfo } from './utils';
+import { fmt, fmtDateTime, orderTotal, getPriceInfo, statusLabel } from './utils';
 
 async function loadLogoBase64(): Promise<string | null> {
   try {
@@ -73,13 +73,13 @@ export async function generateOrderPDF(order: Order, items: Item[], dm?: Deliver
 
   // Status badge
   y = 68;
-  const statusColor = order.status === 'pending' ? orange : order.status === 'waiting' ? primary : green;
+  const statusColor = order.status === 'accepted' ? orange : order.status === 'waiting' ? primary : green;
   doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
   doc.rect(14, y - 4, 40, 8, 'F');
   doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Status: ${order.status.toUpperCase()}`, 16, y + 1);
+  doc.text(`Status: ${statusLabel(order.status).toUpperCase()}`, 16, y + 1);
 
   // Customer & Delivery Info
   y = 85;

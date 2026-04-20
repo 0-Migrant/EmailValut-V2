@@ -12,7 +12,7 @@ export default function Dashboard() {
   const today       = new Date().toDateString();
   const todayOrders = orders.filter((o) => new Date(o.createdAt).toDateString() === today);
   const doneOrders  = orders.filter((o) => o.status === 'done');
-  const pending     = orders.filter((o) => o.status === 'pending' || o.status === 'waiting');
+  const pending     = orders.filter((o) => o.status !== 'done');
   const weekOrders  = orders.filter((o) => Date.now() - new Date(o.createdAt).getTime() < 7 * 86400000);
   const todayRev    = todayOrders.filter((o) => o.status === 'done').reduce((a, o) => a + orderTotal(o), 0);
   const totalRev    = doneOrders.reduce((a, o) => a + orderTotal(o), 0);

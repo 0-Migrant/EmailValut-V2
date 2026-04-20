@@ -31,7 +31,7 @@ export interface OrderItem {
   stockId?: string;
 }
 
-export type OrderStatus = 'waiting' | 'pending' | 'done' | 'cancelled';
+export type OrderStatus = 'waiting' | 'accepted' | 'delivered' | 'waiting_payment' | 'payment_complete' | 'done';
 
 export interface Order {
   id: string;

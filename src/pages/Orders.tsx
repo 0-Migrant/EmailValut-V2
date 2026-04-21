@@ -104,7 +104,7 @@ export default function Orders() {
                               <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'accepted')}>✓ Accept</button>
                             </>}
                             {o.status === 'accepted' && <>
-                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'delivered')}>✓ Delivered</button>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'waiting_payment')}>✓ Delivered</button>
                               <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'waiting')}>↩ Back</button>
                             </>}
                             {o.status === 'delivered' && <>
@@ -112,8 +112,8 @@ export default function Orders() {
                               <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'accepted')}>↩ Back</button>
                             </>}
                             {o.status === 'waiting_payment' && <>
-                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'payment_complete')}>✓ Payment Complete</button>
-                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'delivered')}>↩ Back</button>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'done')}>✓ Payment Complete</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'accepted')}>↩ Back</button>
                             </>}
                             {o.status === 'payment_complete' && <>
                               <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'done')}>✓ Done</button>

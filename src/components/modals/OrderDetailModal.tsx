@@ -139,7 +139,7 @@ export default function OrderDetailModal() {
             <button className="btn btn-success btn-sm" onClick={() => handleStatus('accepted')}>✓ Accept</button>
           </>}
           {order.status === 'accepted' && <>
-            <button className="btn btn-success btn-sm" onClick={() => handleStatus('delivered')}>✓ Mark Delivered</button>
+            <button className="btn btn-success btn-sm" onClick={() => handleStatus('waiting_payment')}>✓ Mark Delivered</button>
             <button className="btn btn-ghost btn-sm"   onClick={() => handleStatus('waiting')}>↩ Back to Waiting</button>
           </>}
           {order.status === 'delivered' && <>
@@ -147,8 +147,8 @@ export default function OrderDetailModal() {
             <button className="btn btn-ghost btn-sm"   onClick={() => handleStatus('accepted')}>↩ Back to Accepted</button>
           </>}
           {order.status === 'waiting_payment' && <>
-            <button className="btn btn-success btn-sm" onClick={() => handleStatus('payment_complete')}>✓ Payment Complete</button>
-            <button className="btn btn-ghost btn-sm"   onClick={() => handleStatus('delivered')}>↩ Back to Delivered</button>
+            <button className="btn btn-success btn-sm" onClick={() => handleStatus('done')}>✓ Payment Complete</button>
+            <button className="btn btn-ghost btn-sm"   onClick={() => handleStatus('accepted')}>↩ Back to Accepted</button>
           </>}
           {order.status === 'payment_complete' && <>
             <button className="btn btn-success btn-sm" onClick={() => handleStatus('done')}>✓ Done</button>

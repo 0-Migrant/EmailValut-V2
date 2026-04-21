@@ -52,6 +52,7 @@ interface AppActions {
 
   // Payouts
   addPayout: (data: Omit<PayoutEntry, 'id' | 'createdAt'>) => void;
+  addPayouts: (entries: Omit<PayoutEntry, 'id' | 'createdAt'>[]) => void;
   deletePayout: (id: string) => void;
 
   // Credentials
@@ -343,6 +344,13 @@ export const useVaultStore = create<VaultStore>()(
         set((s) => {
           const entry: PayoutEntry = { id: uid(), createdAt: new Date().toISOString(), ...data };
           return { payouts: [entry, ...s.payouts] };
+        });
+      },
+      addPayouts(entries) {
+        set((s) => {
+          const now = new Date().toISOString();
+          const newEntries = entries.map((e) => ({ ...e, id: uid(), createdAt: now }));
+          return { payouts: [...newEntries, ...s.payouts] };
         });
       },
       deletePayout(id) {

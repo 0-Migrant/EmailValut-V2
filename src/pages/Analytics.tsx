@@ -1,11 +1,26 @@
+import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { fmt, orderTotal, statusLabel } from '@/lib/utils';
 
 export default function Analytics() {
-  const orders = useVaultStore((s) => s.orders);
-  const items  = useVaultStore((s) => s.items);
+  const orders   = useVaultStore((s) => s.orders);
+  const items    = useVaultStore((s) => s.items);
+  const settings = useVaultStore((s) => s.settings);
+  const platforms = settings.platforms ?? [];
 
-  const done  = orders.filter((o) => o.status === 'done');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+
+  function togglePlatform(p: string) {
+    setSelectedPlatforms((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    );
+  }
+
+  const visibleOrders = selectedPlatforms.length === 0
+    ? orders
+    : orders.filter((o) => selectedPlatforms.includes(o.source));
+
+  const done  = visibleOrders.filter((o) => o.status === 'done');
   const now   = new Date();
   const rev   = (arr: typeof done) => arr.reduce((a, o) => a + orderTotal(o), 0);
 
@@ -45,6 +60,29 @@ export default function Analytics() {
   return (
     <>
       <div className="section-title">📈 Analytics Dashboard</div>
+
+      {/* Platform filter */}
+      <div className="card" style={{ marginBottom:16, padding:'12px 16px' }}>
+        <div style={{ fontSize:12, color:'var(--text-hint)', marginBottom:8, fontWeight:600 }}>Filter by Platform</div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+          <button
+            className={`btn btn-sm ${selectedPlatforms.length === 0 ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setSelectedPlatforms([])}
+          >
+            All
+          </button>
+          {platforms.map((p) => (
+            <button
+              key={p}
+              className={`btn btn-sm ${selectedPlatforms.includes(p) ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => togglePlatform(p)}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid-4" style={{ marginBottom:20 }}>
         {[
           { label:'Today',      val: rev(todayO), cnt: todayO.length },
@@ -93,9 +131,9 @@ export default function Analytics() {
         <div className="card-title">📦 Order Status Breakdown</div>
         <div className="status-grid">
           {allStatuses.map((s) => {
-            const cnt    = orders.filter((o) => o.status === s).length;
-            const pct    = Math.round(cnt / (orders.length || 1) * 100);
-            const revenue = rev(orders.filter((o) => o.status === s) as typeof done);
+            const cnt    = visibleOrders.filter((o) => o.status === s).length;
+            const pct    = Math.round(cnt / (visibleOrders.length || 1) * 100);
+            const revenue = rev(visibleOrders.filter((o) => o.status === s) as typeof done);
             return (
               <div key={s} style={{ textAlign:'center', padding:16, borderRadius:8, background:'var(--bg-card-inner, var(--bg-2))', border:'1px solid var(--border)' }}>
                 <div style={{ fontSize:36, fontWeight:800, color: statusColors[s] }}>{cnt}</div>

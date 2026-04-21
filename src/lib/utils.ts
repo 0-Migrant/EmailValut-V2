@@ -117,6 +117,18 @@ export function statusLabel(status: string): string {
   }
 }
 
+// ─── Platform fee helper ──────────────────────────────────────────────────────
+
+export function calcFee(
+  order: Pick<Order, 'items' | 'customPrice' | 'discountPct' | 'source'>,
+  platformFees: import('./types').PlatformFee[],
+): number {
+  const fee = platformFees.find((f) => f.platform === order.source);
+  if (!fee) return 0;
+  const total = orderTotal(order);
+  return fee.feeType === 'pct' ? total * (fee.value / 100) : fee.value;
+}
+
 // ─── Loyalty check ────────────────────────────────────────────────────────────
 
 export function isLoyaltyMilestone(count: number): boolean {

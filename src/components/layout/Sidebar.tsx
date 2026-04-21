@@ -5,6 +5,7 @@ const NAV = [
   { href: '/new-order',  label: 'New Order',       icon: '➕', section: 'Orders' },
   { href: '/orders',     label: 'Manage Orders',   icon: '📋', section: 'Orders' },
   { href: '/analytics',  label: 'Analytics',       icon: '📈', section: 'Orders' },
+  { href: '/earnings',   label: 'Earnings',        icon: '💰', section: 'Orders' },
   { href: '/items',      label: 'Items',           icon: '🛒', section: 'Management' },
   { href: '/bundles',    label: 'Bundles',         icon: '📦', section: 'Management' },
   { href: '/delivery',   label: 'Delivery Men',    icon: '🚚', section: 'Management' },

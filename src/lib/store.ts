@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
   Item, DeliveryMan, Order, OrderStatus,
-  Credential, Stock, HistoryEntry, Settings, Bundle,
+  Credential, Stock, HistoryEntry, Settings, Bundle, PayoutEntry,
 } from './types';
 import { uid } from './utils';
 import { supabase, isSupabaseEnabled } from './supabase';
@@ -18,6 +18,7 @@ interface AppState {
   credentials: Credential[];
   history: HistoryEntry[];
   settings: Settings;
+  payouts: PayoutEntry[];
 }
 
 // ─── Actions shape ────────────────────────────────────────────────────────────
@@ -46,7 +47,12 @@ interface AppActions {
   // Orders
   addOrder: (data: Omit<Order, 'id' | 'createdAt'>) => Order;
   setOrderStatus: (id: string, status: OrderStatus) => void;
+  updateOrder: (id: string, patch: Partial<Omit<Order, 'id' | 'createdAt'>>) => void;
   deleteOrder: (id: string) => void;
+
+  // Payouts
+  addPayout: (data: Omit<PayoutEntry, 'id' | 'createdAt'>) => void;
+  deletePayout: (id: string) => void;
 
   // Credentials
   addCredential: (data: Omit<Credential, 'id' | 'stocks' | 'added'>) => void;
@@ -94,6 +100,7 @@ const DEFAULT_SETTINGS: Settings = {
     { id: 'pm-3', label: 'Binance', detail: '' },
   ],
   platforms: ['WhatsApp', 'Instagram', 'Phone Call', 'Walk-in', 'Discord'],
+  platformFees: [],
 };
 
 // ─── Helper: add history entry ────────────────────────────────────────────────
@@ -204,6 +211,7 @@ export const useVaultStore = create<VaultStore>()(
       credentials:  [],
       history:      [],
       settings:     DEFAULT_SETTINGS,
+      payouts:      [],
 
       // ── Items ──────────────────────────────────────────────────────────────
       addItem(data) {
@@ -322,6 +330,23 @@ export const useVaultStore = create<VaultStore>()(
             history: pushHistory(s, 'del', `Deleted order ${id.slice(-5)}`),
           };
         });
+      },
+      updateOrder(id, patch) {
+        set((s) => ({
+          orders: s.orders.map((o) => (o.id === id ? { ...o, ...patch } : o)),
+          history: pushHistory(s, 'edit', `Updated order ${id.slice(-5)}`),
+        }));
+      },
+
+      // ── Payouts ───────────────────────────────────────────────────────────
+      addPayout(data) {
+        set((s) => {
+          const entry: PayoutEntry = { id: uid(), createdAt: new Date().toISOString(), ...data };
+          return { payouts: [entry, ...s.payouts] };
+        });
+      },
+      deletePayout(id) {
+        set((s) => ({ payouts: s.payouts.filter((p) => p.id !== id) }));
       },
 
       // ── Credentials ───────────────────────────────────────────────────────
@@ -486,6 +511,7 @@ export const useVaultStore = create<VaultStore>()(
           credentials: [],
           bundles: [],
           history: [],
+          payouts: [],
         });
       },
       importData(data) {
@@ -513,6 +539,9 @@ export const useVaultStore = create<VaultStore>()(
           bundles: data.bundles
             ? [...s.bundles, ...data.bundles.filter((x) => !s.bundles.find((b) => b.id === x.id))]
             : s.bundles,
+          payouts: data.payouts
+            ? [...s.payouts, ...data.payouts.filter((x) => !s.payouts.find((p) => p.id === x.id))]
+            : s.payouts,
           history: pushHistory(s, 'add', 'Imported data from JSON backup'),
         }));
       },

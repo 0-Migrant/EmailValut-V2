@@ -4,14 +4,18 @@ import { useVaultStore } from '@/lib/store';
 import { fmt, fmtDateTime, orderTotal, orderItemsTotal, getPriceInfo, statusBadgeClass, statusLabel } from '@/lib/utils';
 import { generateOrderPDF } from '@/lib/pdf';
 
+
 export default function OrderDetailModal() {
   const { viewOrderId, closeOrderDetail } = useModal();
   const orders      = useVaultStore((s) => s.orders);
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
   const items       = useVaultStore((s) => s.items);
-  const setStatus   = useVaultStore((s) => s.setOrderStatus);
-  const [showUnitPrice, setShowUnitPrice] = useState(false);
-  const [showDiscount,  setShowDiscount]  = useState(true);
+  const setStatus     = useVaultStore((s) => s.setOrderStatus);
+  const updateOrder   = useVaultStore((s) => s.updateOrder);
+  const settings      = useVaultStore((s) => s.settings);
+  const [showUnitPrice,  setShowUnitPrice]  = useState(false);
+  const [showDiscount,   setShowDiscount]   = useState(true);
+  const [editingSource,  setEditingSource]  = useState(false);
 
   if (!viewOrderId) return null;
   const order = orders.find((o) => o.id === viewOrderId);
@@ -49,7 +53,23 @@ export default function OrderDetailModal() {
           </div>
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Order Source</div>
-            <div style={{ fontWeight: 600 }}>{order.source || '—'}</div>
+            {editingSource ? (
+              <select
+                className="inp"
+                defaultValue={order.source}
+                autoFocus
+                style={{ padding: '2px 6px', fontSize: 13 }}
+                onChange={(e) => { updateOrder(order.id, { source: e.target.value }); setEditingSource(false); }}
+                onBlur={() => setEditingSource(false)}
+              >
+                {(settings.platforms ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            ) : (
+              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {order.source || '—'}
+                <button className="btn btn-ghost btn-xs" onClick={() => setEditingSource(true)} title="Edit platform">✏</button>
+              </div>
+            )}
           </div>
         </div>
 

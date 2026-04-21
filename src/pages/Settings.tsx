@@ -1,13 +1,18 @@
 import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
+import { fmt } from '@/lib/utils';
+import type { PlatformFee } from '@/lib/types';
 
 export default function Settings() {
   const settings = useVaultStore((s) => s.settings);
   const updateSettings = useVaultStore((s) => s.updateSettings);
-  const [pmLabel,      setPmLabel]      = useState('');
-  const [pmDetail,     setPmDetail]     = useState('');
-  const [newPlatform,  setNewPlatform]  = useState('');
+  const [pmLabel,       setPmLabel]      = useState('');
+  const [pmDetail,      setPmDetail]     = useState('');
+  const [newPlatform,   setNewPlatform]  = useState('');
+  const [feePlatform,   setFeePlatform]  = useState('');
+  const [feeType,       setFeeType]      = useState<'pct' | 'amount'>('pct');
+  const [feeValue,      setFeeValue]     = useState('');
   const nukeAll = useVaultStore((s) => s.nukeAll);
   const importData = useVaultStore((s) => s.importData);
   const state = useVaultStore((s) => s);
@@ -229,6 +234,84 @@ export default function Settings() {
               >Add</button>
             </div>
           </div>
+        </div>
+      </div>
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="card-title">Platform Fees</div>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+          Define a fee per platform. This is deducted from gross revenue when calculating net earnings.
+        </p>
+
+        {/* Existing fee list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+          {(settings.platformFees ?? []).length === 0
+            ? <div style={{ fontSize: 13, color: 'var(--text-hint)' }}>No platform fees configured.</div>
+            : (settings.platformFees ?? []).map((f) => (
+              <div key={f.platform} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-2, var(--bg))' }}>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{f.platform}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  {f.feeType === 'pct' ? `${f.value}%` : `$${fmt(f.value)}`}
+                </span>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ padding: '2px 8px', fontSize: 12 }}
+                  onClick={() => {
+                    setFeePlatform(f.platform);
+                    setFeeType(f.feeType);
+                    setFeeValue(String(f.value));
+                    updateSettings({ platformFees: (settings.platformFees ?? []).filter((x) => x.platform !== f.platform) });
+                  }}
+                >✏ Edit</button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  style={{ padding: '2px 8px', fontSize: 12 }}
+                  onClick={() => updateSettings({ platformFees: (settings.platformFees ?? []).filter((x) => x.platform !== f.platform) })}
+                >×</button>
+              </div>
+            ))
+          }
+        </div>
+
+        {/* Add fee form */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-hint)' }}>Platform</div>
+            <select className="inp" style={{ minWidth: 130 }} value={feePlatform} onChange={(e) => setFeePlatform(e.target.value)}>
+              <option value="">Select platform...</option>
+              {(settings.platforms ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-hint)' }}>Fee Type</div>
+            <select className="inp" style={{ width: 110 }} value={feeType} onChange={(e) => setFeeType(e.target.value as 'pct' | 'amount')}>
+              <option value="pct">Percentage %</option>
+              <option value="amount">Flat Amount $</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-hint)' }}>Value</div>
+            <input
+              className="inp"
+              type="number"
+              min="0"
+              step="0.01"
+              style={{ width: 90 }}
+              placeholder={feeType === 'pct' ? 'e.g. 5' : 'e.g. 2.50'}
+              value={feeValue}
+              onChange={(e) => setFeeValue(e.target.value)}
+            />
+          </div>
+          <button
+            className="btn btn-ghost"
+            onClick={() => {
+              const val = parseFloat(feeValue);
+              if (!feePlatform || isNaN(val) || val < 0) return;
+              const newFee: PlatformFee = { platform: feePlatform, feeType, value: val };
+              const existing = (settings.platformFees ?? []).filter((x) => x.platform !== feePlatform);
+              updateSettings({ platformFees: [...existing, newFee] });
+              setFeePlatform(''); setFeeValue('');
+            }}
+          >Save Fee</button>
         </div>
       </div>
     </>

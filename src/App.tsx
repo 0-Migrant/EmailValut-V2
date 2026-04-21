@@ -22,6 +22,7 @@ import Credentials from './pages/Credentials';
 import History from './pages/History';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import Earnings from './pages/Earnings';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -85,6 +86,7 @@ function App() {
           <Route path="/credentials" element={<Credentials />} />
           <Route path="/history" element={<History />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/earnings" element={<Earnings />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </AppLayout>

@@ -80,6 +80,21 @@ export interface PaymentMethod {
   detail: string;
 }
 
+export interface PlatformFee {
+  platform: string;
+  feeType: 'pct' | 'amount';
+  value: number;
+}
+
+export interface PayoutEntry {
+  id: string;
+  workerId: string;
+  amount: number;
+  type: 'debit' | 'credit';
+  note: string;
+  createdAt: string;
+}
+
 export interface Settings {
   showpass: boolean;
   confirmdelete: boolean;
@@ -89,6 +104,7 @@ export interface Settings {
   theme: 'light' | 'dark';
   paymentMethods: PaymentMethod[];
   platforms: string[];
+  platformFees: PlatformFee[];
 }
 
 export interface BundleItem {

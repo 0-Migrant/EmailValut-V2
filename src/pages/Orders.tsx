@@ -53,13 +53,13 @@ export default function Orders() {
       <div className="section-title">📋 Manage Orders</div>
 
       <div className="filter-bar orders-filter-bar">
-        <input className="search-box" placeholder="Search by customer, delivery man..."
+        <input className="search-box" placeholder="Search by customer, worker..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
         <select className="inp" value={filter} onChange={(e) => setFilter(e.target.value)}>
           {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <select className="inp" value={dmFilter} onChange={(e) => setDmFilter(e.target.value)}>
-          <option value="">All Delivery Men</option>
+          <option value="">All Workers</option>
           {deliveryMen.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </div>
@@ -72,7 +72,7 @@ export default function Orders() {
               <table>
                 <thead>
                   <tr>
-                    <th>#</th><th>Customer</th><th>Delivery Man</th>
+                    <th>#</th><th>Customer</th><th>Worker</th>
                     <th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th>
                   </tr>
                 </thead>

@@ -8,7 +8,7 @@ const NAV = [
   { href: '/earnings',   label: 'Earnings',        icon: '💰', section: 'Orders' },
   { href: '/items',      label: 'Items',           icon: '🛒', section: 'Management' },
   { href: '/bundles',    label: 'Bundles',         icon: '📦', section: 'Management' },
-  { href: '/delivery',   label: 'Delivery Men',    icon: '🚚', section: 'Management' },
+  { href: '/delivery',   label: 'Workers',         icon: '🚚', section: 'Management' },
   { href: '/credentials',label: 'Credentials',     icon: '🔒', section: 'Management' },
   { href: '/history',    label: 'History',         icon: '🕐', section: 'System' },
   { href: '/settings',   label: 'Settings',        icon: '⚙️', section: 'System' },

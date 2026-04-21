@@ -43,10 +43,10 @@ export default function Delivery() {
 
   return (
     <>
-      <div className="section-title">🚚 Delivery Men</div>
+      <div className="section-title">🚚 Workers</div>
       <div className="grid-2" style={{ alignItems:'start' }}>
         <div className="card">
-          <div className="card-title">{editId ? 'Edit Delivery Man' : 'Add Delivery Man'}</div>
+          <div className="card-title">{editId ? 'Edit Worker' : 'Add Worker'}</div>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             <div className="field">
               <label>Full Name</label>
@@ -61,9 +61,9 @@ export default function Delivery() {
         </div>
 
         <div className="card">
-          <div className="card-title">All Delivery Men ({deliveryMen.length})</div>
+          <div className="card-title">All Workers ({deliveryMen.length})</div>
           {!deliveryMen.length
-            ? <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon">🚚</div>No delivery men yet.</div>
+            ? <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon">🚚</div>No workers yet.</div>
             : (
               <div className="table-wrap"><table>
                 <thead><tr><th>Name</th><th>Orders</th><th>Revenue</th><th></th></tr></thead>

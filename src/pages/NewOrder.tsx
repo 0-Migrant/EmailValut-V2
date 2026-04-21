@@ -131,7 +131,7 @@ export default function NewOrder() {
   }
 
   function submit() {
-    if (!dmId) { alert('Please select a delivery man.'); return; }
+    if (!dmId) { alert('Please select a worker.'); return; }
     const validItems = orderItems.filter((oi) => oi.qty > 0);
     if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
     const cp2 = customPrice !== '' && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : null;
@@ -177,9 +177,9 @@ export default function NewOrder() {
           <div className="card-title">Delivery Details</div>
           <div className="new-order-fields">
             <div className="field">
-              <label>Delivery Man</label>
+              <label>Worker</label>
               <select className="inp" value={dmId} onChange={(e) => setDmId(e.target.value)}>
-                <option value="">— Select delivery man —</option>
+                <option value="">— Select worker —</option>
                 {deliveryMen.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>

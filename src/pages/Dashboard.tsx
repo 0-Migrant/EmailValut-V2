@@ -68,7 +68,7 @@ export default function Dashboard() {
                 <span style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>{fmt(rev)} $ USD</span>
               </div>
             );
-          }) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon">🚚</div>No delivery men added</div>}
+          }) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon">🚚</div>No workers added</div>}
         </div>
       </div>
 
@@ -80,7 +80,7 @@ export default function Dashboard() {
         {pending.length ? (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Customer</th><th>Delivery Man</th><th>Items</th><th>Total</th><th>Status</th><th>Time</th></tr></thead>
+              <thead><tr><th>#</th><th>Customer</th><th>Worker</th><th>Items</th><th>Total</th><th>Status</th><th>Time</th></tr></thead>
               <tbody>
                 {pending.slice(0, 8).map((o) => {
                   const dm = deliveryMen.find((d) => d.id === o.deliveryManId);
@@ -105,7 +105,7 @@ export default function Dashboard() {
       <div className="grid-3">
         {[
           { label:'Total Items',   value: items.length,       href:'/items' },
-          { label:'Delivery Men',  value: deliveryMen.length, href:'/delivery' },
+          { label:'Workers',       value: deliveryMen.length, href:'/delivery' },
           { label:'Credentials',   value: credentials.length, href:'/credentials' },
         ].map((c) => (
           <div key={c.label} className="stat-card" style={{ cursor:'pointer' }} onClick={() => navigate(c.href)}>

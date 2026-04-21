@@ -39,7 +39,7 @@ export default function OrderDetailModal() {
 
         <div className="order-info-grid">
           <div>
-            <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Delivery Man</div>
+            <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Worker</div>
             <div style={{ fontWeight: 600 }}>{dm?.name ?? 'Unknown'}</div>
           </div>
           <div>

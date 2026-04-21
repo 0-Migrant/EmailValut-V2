@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
-import { useModal } from '@/context/ModalContext';
 import { fmt, fmtDateTime, orderTotal, calcFee } from '@/lib/utils';
 import { uid } from '@/lib/utils';
 
@@ -20,7 +19,6 @@ export default function Earnings() {
   const addPayout    = useVaultStore((s) => s.addPayout);
   const addPayouts   = useVaultStore((s) => s.addPayouts);
   const deletePayout = useVaultStore((s) => s.deletePayout);
-  const { showConfirm } = useModal();
 
   const [selectedWorker, setSelectedWorker] = useState('all');
 
@@ -110,11 +108,13 @@ export default function Earnings() {
   }
 
   function handleDelete(id: string) {
-    if (settings.confirmdelete) {
-      showConfirm('Delete entry', 'Remove this transaction?', () => deletePayout(id));
-    } else {
-      deletePayout(id);
+    const pass = window.prompt('🔐 Enter admin password to delete this transaction:');
+    if (pass === null) return;
+    if (pass !== 'arerede2000.') {
+      alert('❌ Incorrect password. Deletion cancelled.');
+      return;
     }
+    deletePayout(id);
   }
 
   const workerLabel = (wid: string) => {
@@ -363,12 +363,19 @@ export default function Earnings() {
                   {visiblePayouts.map((p) => {
                     const isPool = p.workerId === POOL_ID;
                     const dm     = deliveryMen.find((d) => d.id === p.workerId);
-                    const label  = isPool ? '💼 Pool' : (dm?.name ?? p.workerId);
                     const isAdd  = p.type === 'credit';
                     return (
                       <tr key={p.id}>
                         <td><span className="tag">{fmtDateTime(p.createdAt)}</span></td>
-                        <td style={{ fontWeight: 500 }}>{label}</td>
+                        <td style={{ fontWeight: 500 }}>
+                          {isPool
+                            ? <span>💼 Pool</span>
+                            : <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ fontSize: 13, color: 'var(--text-hint)' }}>👤</span>
+                                {dm?.name ?? p.workerId}
+                              </span>
+                          }
+                        </td>
                         <td>
                           <span className={`badge ${isAdd ? 'badge-done' : 'badge-cancelled'}`}>
                             {isPool

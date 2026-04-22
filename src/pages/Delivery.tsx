@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt, orderTotal } from '@/lib/utils';
+import Icon from '@/components/Icon';
 
 export default function Delivery() {
   const deliveryMen  = useVaultStore((s) => s.deliveryMen);
@@ -43,7 +44,7 @@ export default function Delivery() {
 
   return (
     <>
-      <div className="section-title">🚚 Workers</div>
+      <div className="section-title"><Icon name="workers" size={18} style={{ marginRight: 8 }} />Workers</div>
       <div className="grid-2" style={{ alignItems:'start' }}>
         <div className="card">
           <div className="card-title">{editId ? 'Edit Worker' : 'Add Worker'}</div>
@@ -63,7 +64,7 @@ export default function Delivery() {
         <div className="card">
           <div className="card-title">All Workers ({deliveryMen.length})</div>
           {!deliveryMen.length
-            ? <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon">🚚</div>No workers yet.</div>
+            ? <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon"><Icon name="workers" size={28} /></div>No workers yet.</div>
             : (
               <div className="table-wrap"><table>
                 <thead><tr><th>Name</th><th>Orders</th><th>Revenue</th><th></th></tr></thead>
@@ -78,7 +79,7 @@ export default function Delivery() {
                         <td style={{ fontWeight:700, color:'var(--green)' }}>{fmt(rev)} $ USD</td>
                         <td><div className="action-group">
                           <button className="btn btn-ghost btn-xs" onClick={() => startEdit(dm.id)}>Edit</button>
-                          <button className="btn btn-danger btn-xs" onClick={() => handleDelete(dm.id)}>×</button>
+                          <button className="btn btn-danger btn-xs" onClick={() => handleDelete(dm.id)}><Icon name="trash" size={11} /></button>
                         </div></td>
                       </tr>
                     );

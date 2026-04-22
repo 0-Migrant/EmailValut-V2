@@ -1382,7 +1382,7 @@ body.dark .badge-waiting {
   display: flex;
   gap: 10px;
   margin-bottom: 16px;
-  align-items: flex-end
+  align-items: center
 }
 
 /* Hamburger menu button — hidden on desktop */

@@ -53,6 +53,8 @@ interface AppActions {
   // Payouts
   addPayout: (data: Omit<PayoutEntry, 'id' | 'createdAt'>) => void;
   addPayouts: (entries: Omit<PayoutEntry, 'id' | 'createdAt'>[]) => void;
+  markPayoutPaid: (id: string) => void;
+  partialOutPayout: (id: string, outAmount: number) => void;
   deletePayout: (id: string) => void;
 
   // Credentials
@@ -351,6 +353,22 @@ export const useVaultStore = create<VaultStore>()(
           const now = new Date().toISOString();
           const newEntries = entries.map((e) => ({ ...e, id: uid(), createdAt: now }));
           return { payouts: [...newEntries, ...s.payouts] };
+        });
+      },
+      markPayoutPaid(id) {
+        set((s) => ({ payouts: s.payouts.map((p) => p.id === id ? { ...p, status: 'paid' as const } : p) }));
+      },
+      partialOutPayout(id, outAmount) {
+        set((s) => {
+          const entry = s.payouts.find((p) => p.id === id);
+          if (!entry || entry.status !== 'pending') return s;
+          const remainder = entry.amount - outAmount;
+          const paidEntry: PayoutEntry = { ...entry, id: uid(), amount: outAmount, status: 'paid', createdAt: new Date().toISOString() };
+          if (remainder <= 0) {
+            return { payouts: s.payouts.map((p) => p.id === id ? { ...p, status: 'paid' as const } : p) };
+          }
+          const updatedPayouts = s.payouts.map((p) => p.id === id ? { ...p, amount: remainder } : p);
+          return { payouts: [paidEntry, ...updatedPayouts] };
         });
       },
       deletePayout(id) {

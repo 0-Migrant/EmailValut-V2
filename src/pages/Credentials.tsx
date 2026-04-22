@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon from '@/components/Icon';
 import React from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
@@ -138,7 +139,7 @@ export default function Credentials() {
 
   return (
     <>
-      <div className="section-title">🔒 Credentials Management</div>
+      <div className="section-title"><Icon name="credentials" size={18} style={{ marginRight: 8 }} />Credentials Management</div>
 
       <div className="grid-2" style={{ alignItems: 'start', marginBottom: 20 }}>
         <div className="card">
@@ -189,7 +190,7 @@ export default function Credentials() {
           </div>
 
           {!filtered.length ? (
-            <div className="empty-state" style={{ padding: '20px 0' }}><div className="empty-icon">🔒</div>No credentials found.</div>
+            <div className="empty-state" style={{ padding: '20px 0' }}><div className="empty-icon"><Icon name="credentials" size={28} /></div>No credentials found.</div>
           ) : (
             <div className="table-wrap">
               <table>

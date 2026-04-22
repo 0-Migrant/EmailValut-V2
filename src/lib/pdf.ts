@@ -96,7 +96,7 @@ export async function generateOrderPDF(order: Order, items: Item[], dm?: Deliver
   y += 6;
   doc.text(`Delivery Assigned: ${dm?.name || 'Not assigned'}`, 14, y);
   y += 6;
-  doc.text(`Payment: ${order.paymentMethod || '—'}${order.paymentDetail ? ` — ${order.paymentDetail}` : ''}`, 14, y);
+  doc.text(`Payment: ${order.paymentMethod || '-'}${order.paymentDetail ? ` - ${order.paymentDetail}` : ''}`, 14, y);
 
   // Items table
   y = 122;
@@ -201,6 +201,236 @@ export async function generateOrderPDF(order: Order, items: Item[], dm?: Deliver
   doc.text('Thank you for your order! We appreciate your business.', 105, y, { align: 'center' });
 
   doc.save(`Invoice_${order.id.slice(-5)}_${order.customerId || 'Order'}.pdf`);
+}
+
+export async function generateVIPOrderPDF(
+  order: Order,
+  items: Item[],
+  dm?: DeliveryMan,
+  showUnitPrice = false,
+  showDiscount = true,
+  customerImage?: string | null,
+) {
+  const doc = new jsPDF();
+  const logo = await loadLogoBase64();
+  const info = getPriceInfo(order);
+
+  // VIP color palette — deep navy + gold
+  const navy   = [10,  22,  50];
+  const gold   = [180, 140, 60];
+  const goldL  = [212, 175, 90];
+  const cream  = [255, 250, 235];
+  const white  = [255, 255, 255];
+  const muted  = [120, 110, 90];
+
+  const W = 210;
+
+  // ── Full-page background tint ───────────────────────────────────────────────
+  doc.setFillColor(cream[0], cream[1], cream[2]);
+  doc.rect(0, 0, W, 297, 'F');
+
+  // ── Top navy header band ────────────────────────────────────────────────────
+  doc.setFillColor(navy[0], navy[1], navy[2]);
+  doc.rect(0, 0, W, 50, 'F');
+
+  // Thin gold rule below header
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.rect(0, 50, W, 1.5, 'F');
+
+  // ── Gold corner ornaments ───────────────────────────────────────────────────
+  const orn = (x: number, y: number, flip: boolean) => {
+    const sx = flip ? -1 : 1;
+    doc.setDrawColor(gold[0], gold[1], gold[2]);
+    doc.setLineWidth(0.6);
+    doc.line(x, y, x + sx * 12, y);
+    doc.line(x, y, x, y + 12);
+    doc.line(x + sx * 6, y, x + sx * 6, y + 6);
+    doc.line(x, y + 6, x + sx * 6, y + 6);
+  };
+  orn(14, 55, false);
+  orn(196, 55, true);
+  orn(14, 283, false);
+  orn(196, 283, true);
+
+  // ── Logo / title in header ──────────────────────────────────────────────────
+  if (logo) {
+    doc.addImage(logo, 'PNG', W / 2 - 28, 6, 56, 30);
+  } else {
+    doc.setFontSize(22);
+    doc.setTextColor(goldL[0], goldL[1], goldL[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Instant-Play', W / 2, 22, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(180, 170, 140);
+    doc.text('SHOP', W / 2, 30, { align: 'center' });
+  }
+
+  // ── "VIP INVOICE" label ─────────────────────────────────────────────────────
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(goldL[0], goldL[1], goldL[2]);
+  doc.text('*  V I P  I N V O I C E  *', W / 2, 43, { align: 'center' });
+
+  // ── Customer photo (optional) ───────────────────────────────────────────────
+  let contentY = 65;
+  const hasImage = !!customerImage;
+
+  if (hasImage) {
+    const imgX = W - 14 - 35 - 20;
+    const imgY = 58;
+    // Gold frame
+    doc.setFillColor(gold[0], gold[1], gold[2]);
+    doc.roundedRect(imgX - 2, imgY - 2, 39, 39, 3, 3, 'F');
+    doc.addImage(customerImage!, 'JPEG', imgX, imgY, 35, 35);
+  }
+
+  // ── Order meta ──────────────────────────────────────────────────────────────
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(navy[0], navy[1], navy[2]);
+  doc.text(`#${order.id.slice(-8).toUpperCase()}`, 14, contentY + 6);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(muted[0], muted[1], muted[2]);
+  doc.text('ORDER NUMBER', 14, contentY);
+
+  // Date
+  doc.setFontSize(8);
+  doc.setTextColor(muted[0], muted[1], muted[2]);
+  doc.text('DATE', 14, contentY + 16);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(navy[0], navy[1], navy[2]);
+  doc.text(fmtDateTime(order.createdAt), 14, contentY + 22);
+
+  // Status pill
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.roundedRect(14, contentY + 28, 52, 8, 2, 2, 'F');
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(white[0], white[1], white[2]);
+  doc.text(statusLabel(order.status).toUpperCase(), 40, contentY + 33.5, { align: 'center' });
+
+  contentY += 46;
+
+  // ── Divider ─────────────────────────────────────────────────────────────────
+  doc.setDrawColor(gold[0], gold[1], gold[2]);
+  doc.setLineWidth(0.4);
+  doc.line(14, contentY, W - 14, contentY);
+  contentY += 8;
+
+  // ── Customer + Worker info row ───────────────────────────────────────────────
+  const colW = hasImage ? (W - 14 - 40) / 2 : (W - 28) / 2;
+
+  const infoBlock = (label: string, value: string, x: number, y: number) => {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(muted[0], muted[1], muted[2]);
+    doc.text(label.toUpperCase(), x, y);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(navy[0], navy[1], navy[2]);
+    doc.text(value, x, y + 6);
+  };
+
+  infoBlock('Customer', order.customerId || 'VIP Guest', 14, contentY);
+  infoBlock('Worker', dm?.name || '-', 14 + colW, contentY);
+  infoBlock('Payment', `${order.paymentMethod || '-'}${order.paymentDetail ? ` - ${order.paymentDetail}` : ''}`, 14, contentY + 16);
+  if (order.source) infoBlock('Platform', order.source, 14 + colW, contentY + 16);
+
+  contentY += 34;
+
+  // ── Items table ──────────────────────────────────────────────────────────────
+  doc.setDrawColor(gold[0], gold[1], gold[2]);
+  doc.setLineWidth(0.4);
+  doc.line(14, contentY, W - 14, contentY);
+
+  // Header row
+  contentY += 7;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(gold[0], gold[1], gold[2]);
+  doc.text('ITEM', 14, contentY);
+  doc.text('QTY', showUnitPrice ? 110 : 130, contentY);
+  if (showUnitPrice) doc.text('UNIT', 140, contentY);
+  doc.text('AMOUNT', showUnitPrice ? 175 : 165, contentY, { align: 'right' });
+
+  doc.setDrawColor(goldL[0], goldL[1], goldL[2]);
+  doc.setLineWidth(0.3);
+  doc.line(14, contentY + 3, W - 14, contentY + 3);
+
+  contentY += 10;
+
+  // Rows
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  let rowAlt = false;
+  order.items.forEach((oi) => {
+    const item = items.find(i => i.id === oi.itemId);
+    const sub = oi.price * oi.qty;
+    if (rowAlt) {
+      doc.setFillColor(245, 238, 215);
+      doc.rect(14, contentY - 5, W - 28, 7.5, 'F');
+    }
+    rowAlt = !rowAlt;
+    doc.setTextColor(navy[0], navy[1], navy[2]);
+    doc.text(item?.name || 'Unknown', 14, contentY);
+    doc.text(String(oi.qty), showUnitPrice ? 113 : 133, contentY);
+    if (showUnitPrice) {
+      doc.setTextColor(muted[0], muted[1], muted[2]);
+      doc.text(`$${fmt(oi.price)}`, 140, contentY);
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(navy[0], navy[1], navy[2]);
+    doc.text(`$${fmt(sub)}`, showUnitPrice ? 175 : 165, contentY, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    contentY += 8;
+    if (contentY > 260) { doc.addPage(); contentY = 20; }
+  });
+
+  // ── Totals ───────────────────────────────────────────────────────────────────
+  contentY += 4;
+  doc.setDrawColor(gold[0], gold[1], gold[2]);
+  doc.setLineWidth(0.4);
+  doc.line(110, contentY, W - 14, contentY);
+  contentY += 7;
+
+  const totRow = (label: string, val: string, color?: number[]) => {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(muted[0], muted[1], muted[2]);
+    doc.text(label, 115, contentY);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...(color ?? navy) as [number, number, number]);
+    doc.text(val, W - 14, contentY, { align: 'right' });
+    contentY += 7;
+  };
+
+  totRow('Subtotal', `$${fmt(info.itemsTotal)}`);
+  if (showDiscount) {
+    if (info.type === 'discount')   totRow(`Discount  -${info.pct}%`, `-$${fmt(info.saved)}`,   [34, 160, 80]);
+    if (info.type === 'surcharge')  totRow(`Surcharge +${info.pct}%`, `+$${fmt(info.extra)}`,   [200, 100, 20]);
+  }
+
+  contentY += 2;
+  doc.setFillColor(navy[0], navy[1], navy[2]);
+  doc.roundedRect(110, contentY - 5, W - 14 - 110, 12, 2, 2, 'F');
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(goldL[0], goldL[1], goldL[2]);
+  doc.text('TOTAL', 116, contentY + 2.5);
+  doc.setFontSize(12);
+  doc.text(`$${fmt(orderTotal(order))}`, W - 16, contentY + 2.5, { align: 'right' });
+
+  // ── Footer ───────────────────────────────────────────────────────────────────
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(gold[0], gold[1], gold[2]);
+  doc.text('*  Thank you for being a valued VIP customer. We treasure your loyalty.  *', W / 2, 286, { align: 'center' });
+
+  doc.save(`VIP_Invoice_${order.id.slice(-5)}_${order.customerId || 'VIP'}.pdf`);
 }
 
 export function generateCredentialsPDF(credentials: Credential[]) {

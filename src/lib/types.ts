@@ -91,6 +91,7 @@ export interface PayoutEntry {
   workerId: string;
   amount: number;
   type: 'debit' | 'credit';
+  status?: 'pending' | 'paid'; // only relevant for worker debit entries
   note: string;
   createdAt: string;
 }

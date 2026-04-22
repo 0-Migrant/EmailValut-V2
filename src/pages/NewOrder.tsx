@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon from '@/components/Icon';
 import { useNavigate } from 'react-router-dom';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
@@ -169,7 +170,7 @@ export default function NewOrder() {
 
   return (
     <>
-      <div className="section-title">➕ New Order</div>
+      <div className="section-title"><Icon name="newOrder" size={18} style={{ marginRight: 8 }} />New Order</div>
       <div style={{ maxWidth: 720, display:'flex', flexDirection:'column', gap:16 }}>
 
         {/* Delivery Details */}

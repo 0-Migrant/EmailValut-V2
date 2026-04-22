@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmtDateTime } from '@/lib/utils';
+import Icon from '@/components/Icon';
 
 export default function History() {
   const history = useVaultStore((s) => s.history);
@@ -28,18 +29,18 @@ export default function History() {
 
   return (
     <>
-      <div className="section-title">🕐 System History</div>
+      <div className="section-title"><Icon name="history" size={18} style={{ marginRight: 8 }} />System History</div>
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="history-toolbar">
           <input className="search-box" placeholder="Search logs..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <button className="btn btn-danger btn-sm" onClick={() => showConfirm('Clear History', 'Delete all log history permanentely?', clearHistory)}>
-            🗑 Clear All Logs
+            <Icon name="trash" size={13} style={{ marginRight: 5 }} />Clear All Logs
           </button>
         </div>
 
         {!filtered.length ? (
-          <div className="empty-state" style={{ padding: '40px 0' }}><div className="empty-icon">🕐</div>No activity logs found.</div>
+          <div className="empty-state" style={{ padding: '40px 0' }}><div className="empty-icon"><Icon name="history" size={28} /></div>No activity logs found.</div>
         ) : (
           <div>
             {filtered.slice(0, 100).map((h) => (
@@ -51,9 +52,9 @@ export default function History() {
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {h.snapshot && (
-                    <button className="btn btn-ghost btn-xs" title="Restore snapshot" onClick={() => handleRestore(h.id, h.time)}>↩ Restore</button>
+                    <button className="btn btn-ghost btn-xs" title="Restore snapshot" onClick={() => handleRestore(h.id, h.time)}><Icon name="arrowLeft" size={11} style={{ marginRight: 3 }} />Restore</button>
                   )}
-                  <button className="btn btn-ghost btn-xs" onClick={() => deleteEntry(h.id)}>🗑</button>
+                  <button className="btn btn-ghost btn-xs" onClick={() => deleteEntry(h.id)}><Icon name="trash" size={11} /></button>
                 </div>
               </div>
             ))}

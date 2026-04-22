@@ -3,6 +3,7 @@ import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt, fmtDateTime, orderTotal, getPriceInfo, statusBadgeClass, statusLabel } from '@/lib/utils';
 import type { OrderStatus } from '@/lib/types';
+import Icon from '@/components/Icon';
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'all',             label: 'All Orders' },
@@ -50,7 +51,7 @@ export default function Orders() {
 
   return (
     <>
-      <div className="section-title">📋 Manage Orders</div>
+      <div className="section-title"><Icon name="orders" size={18} style={{ marginRight: 8 }} />Manage Orders</div>
 
       <div className="filter-bar orders-filter-bar">
         <input className="search-box" placeholder="Search by customer, worker..."
@@ -101,29 +102,29 @@ export default function Orders() {
                         <td>
                           <div className="action-group">
                             {o.status === 'waiting' && <>
-                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'accepted')}>✓ Accept</button>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'accepted')}><Icon name="check" size={11} style={{ marginRight: 3 }} />Accept</button>
                             </>}
                             {o.status === 'accepted' && <>
-                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'waiting_payment')}>✓ Delivered</button>
-                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'waiting')}>↩ Back</button>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'waiting_payment')}><Icon name="check" size={11} style={{ marginRight: 3 }} />Delivered</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'waiting')}><Icon name="arrowLeft" size={11} style={{ marginRight: 3 }} />Back</button>
                             </>}
                             {o.status === 'delivered' && <>
-                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'waiting_payment')}>✓ Awaiting Payment</button>
-                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'accepted')}>↩ Back</button>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'waiting_payment')}><Icon name="check" size={11} style={{ marginRight: 3 }} />Awaiting Payment</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'accepted')}><Icon name="arrowLeft" size={11} style={{ marginRight: 3 }} />Back</button>
                             </>}
                             {o.status === 'waiting_payment' && <>
-                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'done')}>✓ Payment Complete</button>
-                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'accepted')}>↩ Back</button>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'done')}><Icon name="check" size={11} style={{ marginRight: 3 }} />Payment Complete</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'accepted')}><Icon name="arrowLeft" size={11} style={{ marginRight: 3 }} />Back</button>
                             </>}
                             {o.status === 'payment_complete' && <>
-                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'done')}>✓ Done</button>
-                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'waiting_payment')}>↩ Back</button>
+                              <button className="btn btn-success btn-xs" onClick={() => handleStatus(o.id,'done')}><Icon name="check" size={11} style={{ marginRight: 3 }} />Done</button>
+                              <button className="btn btn-ghost btn-xs"   onClick={() => handleStatus(o.id,'waiting_payment')}><Icon name="arrowLeft" size={11} style={{ marginRight: 3 }} />Back</button>
                             </>}
                             {o.status === 'done' &&
-                              <button className="btn btn-ghost btn-xs" onClick={() => handleStatus(o.id,'waiting')}>↩ Reset</button>
+                              <button className="btn btn-ghost btn-xs" onClick={() => handleStatus(o.id,'waiting')}><Icon name="arrowLeft" size={11} style={{ marginRight: 3 }} />Reset</button>
                             }
                             <button className="btn btn-ghost btn-xs" onClick={() => openOrderDetail(o.id)}>View</button>
-                            <button className="btn btn-danger btn-xs" onClick={() => handleDelete(o.id)}>🗑</button>
+                            <button className="btn btn-danger btn-xs" onClick={() => handleDelete(o.id)}><Icon name="trash" size={11} /></button>
                           </div>
                         </td>
                       </tr>

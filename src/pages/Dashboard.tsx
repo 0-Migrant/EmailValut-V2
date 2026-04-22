@@ -1,6 +1,7 @@
 import { useVaultStore } from '@/lib/store';
 import { fmt, fmtTime, orderTotal, statusBadgeClass } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import Icon from '@/components/Icon';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="section-title">📊 Dashboard Overview</div>
+      <div className="section-title"><Icon name="dashboard" size={18} style={{ marginRight: 8 }} />Dashboard Overview</div>
 
       <div className="grid-4" style={{ marginBottom: 20 }}>
         {[
@@ -46,16 +47,16 @@ export default function Dashboard() {
 
       <div className="grid-2" style={{ marginBottom: 20 }}>
         <div className="card">
-          <div className="card-title">🏆 Top Selling Items</div>
+          <div className="card-title">Top Selling Items</div>
           {topItems.length ? topItems.map((x) => (
             <div key={x.item!.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:'1px solid var(--border-row)' }}>
               <span style={{ fontSize:13, fontWeight:500 }}>{x.item!.name}</span>
               <span className="badge badge-info">×{x.qty}</span>
             </div>
-          )) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon">📦</div>No sales yet</div>}
+          )) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon"><Icon name="bundles" size={28} /></div>No sales yet</div>}
         </div>
         <div className="card">
-          <div className="card-title">🚚 Delivery Performance</div>
+          <div className="card-title">Worker Performance</div>
           {deliveryMen.length ? deliveryMen.map((dm) => {
             const rev = dmRevenue[dm.id] || 0;
             const cnt = doneOrders.filter((o) => o.deliveryManId === dm.id).length;
@@ -68,13 +69,13 @@ export default function Dashboard() {
                 <span style={{ fontSize:13, fontWeight:700, color:'var(--green)' }}>{fmt(rev)} $ USD</span>
               </div>
             );
-          }) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon">🚚</div>No workers added</div>}
+          }) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon"><Icon name="workers" size={28} /></div>No workers added</div>}
         </div>
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-          <div className="card-title" style={{ margin:0 }}>⏳ Waiting / Pending — Quick View</div>
+          <div className="card-title" style={{ margin:0 }}>Waiting / Pending — Quick View</div>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('/orders')}>Manage Orders →</button>
         </div>
         {pending.length ? (
@@ -99,7 +100,7 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-        ) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon">✅</div>No pending orders</div>}
+        ) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon"><Icon name="check" size={28} /></div>No pending orders</div>}
       </div>
 
       <div className="grid-3">

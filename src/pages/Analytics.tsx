@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { fmt, orderTotal, statusLabel } from '@/lib/utils';
+import Icon from '@/components/Icon';
 
 export default function Analytics() {
   const orders   = useVaultStore((s) => s.orders);
@@ -59,7 +60,7 @@ export default function Analytics() {
 
   return (
     <>
-      <div className="section-title">📈 Analytics Dashboard</div>
+      <div className="section-title"><Icon name="analytics" size={18} style={{ marginRight: 8 }} />Analytics Dashboard</div>
 
       {/* Platform filter */}
       <div className="card" style={{ marginBottom:16, padding:'12px 16px' }}>
@@ -112,7 +113,7 @@ export default function Analytics() {
           </div>
         </div>
         <div className="card">
-          <div className="card-title">🏆 Revenue by Item</div>
+          <div className="card-title">Revenue by Item</div>
           <div className="chart-bar-wrap">
             {topItems.length
               ? topItems.map((x) => (
@@ -128,7 +129,7 @@ export default function Analytics() {
       </div>
 
       <div className="card" style={{ marginBottom:20 }}>
-        <div className="card-title">📦 Order Status Breakdown</div>
+        <div className="card-title">Order Status Breakdown</div>
         <div className="status-grid">
           {allStatuses.map((s) => {
             const cnt    = visibleOrders.filter((o) => o.status === s).length;

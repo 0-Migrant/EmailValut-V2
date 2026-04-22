@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon from '@/components/Icon';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
@@ -85,7 +86,7 @@ export default function Bundles() {
 
   return (
     <>
-      <div className="section-title">📦 Bundles Management</div>
+      <div className="section-title"><Icon name="bundles" size={18} style={{ marginRight: 8 }} />Bundles Management</div>
 
       <div className="grid-2" style={{ alignItems: 'start', marginBottom: 20 }}>
 
@@ -152,7 +153,7 @@ export default function Bundles() {
         <div className="card">
           <div className="card-title">All Bundles ({bundles.length})</div>
           {!bundles.length
-            ? <div className="empty-state" style={{ padding: '20px 0' }}><div className="empty-icon">📦</div>No bundles yet.</div>
+            ? <div className="empty-state" style={{ padding: '20px 0' }}><div className="empty-icon"><Icon name="bundles" size={28} /></div>No bundles yet.</div>
             : (
               <div className="table-wrap">
                 <table>

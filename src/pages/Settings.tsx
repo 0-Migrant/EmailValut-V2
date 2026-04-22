@@ -3,6 +3,7 @@ import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
 import type { PlatformFee } from '@/lib/types';
+import Icon from '@/components/Icon';
 
 export default function Settings() {
   const settings = useVaultStore((s) => s.settings);
@@ -65,7 +66,7 @@ export default function Settings() {
 
   return (
     <>
-      <div className="section-title">⚙️ System Settings</div>
+      <div className="section-title"><Icon name="settings" size={18} style={{ marginRight: 8 }} />System Settings</div>
 
       <div className="settings-grid">
         <div className="card">
@@ -131,14 +132,14 @@ export default function Settings() {
           Backup your data locally or import an existing JSON backup. Exported data includes all items, orders, and credentials.
         </p>
         <div className="data-mgmt-row">
-          <button className="btn btn-ghost" onClick={exportBackup}>📤 Export JSON Backup</button>
+          <button className="btn btn-ghost" onClick={exportBackup}><Icon name="download" size={13} style={{ marginRight: 5 }} />Export JSON Backup</button>
 
           <div style={{ position: 'relative' }}>
-            <button className="btn btn-ghost" onClick={() => document.getElementById('import-file')?.click()}>📥 Import JSON Backup</button>
+            <button className="btn btn-ghost" onClick={() => document.getElementById('import-file')?.click()}><Icon name="pdf" size={13} style={{ marginRight: 5 }} />Import JSON Backup</button>
             <input id="import-file" type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
           </div>
 
-          <button className="btn btn-danger" onClick={handleReset}>🛑 Factory Reset</button>
+          <button className="btn btn-danger" onClick={handleReset}><Icon name="x" size={13} style={{ marginRight: 5 }} />Factory Reset</button>
         </div>
       </div>
 
@@ -261,12 +262,12 @@ export default function Settings() {
                     setFeeValue(String(f.value));
                     updateSettings({ platformFees: (settings.platformFees ?? []).filter((x) => x.platform !== f.platform) });
                   }}
-                >✏ Edit</button>
+                ><Icon name="edit" size={11} style={{ marginRight: 3 }} />Edit</button>
                 <button
                   className="btn btn-danger btn-sm"
                   style={{ padding: '2px 8px', fontSize: 12 }}
                   onClick={() => updateSettings({ platformFees: (settings.platformFees ?? []).filter((x) => x.platform !== f.platform) })}
-                >×</button>
+                ><Icon name="x" size={11} /></button>
               </div>
             ))
           }

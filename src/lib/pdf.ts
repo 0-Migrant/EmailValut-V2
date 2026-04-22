@@ -266,19 +266,23 @@ export async function generateVIPOrderPDF(
     return 65;
   };
 
-  // Minimal continuation page — cream bg + subtle gold rule + order reference
+  // Minimal continuation page — cream bg, no header repeat
   const setupContinuationPage = () => {
     doc.setFillColor(cream[0], cream[1], cream[2]);
     doc.rect(0, 0, W, 297, 'F');
-    doc.setFillColor(gold[0], gold[1], gold[2]);
-    doc.rect(0, 8, W, 0.8, 'F');
     orn(14, 283, false);
     orn(196, 283, true);
-    doc.setFontSize(7);
+    // Subtle dotted separator so items continue naturally
+    doc.setDrawColor(gold[0], gold[1], gold[2]);
+    doc.setLineWidth(0.3);
+    doc.setLineDashPattern([1, 2], 0);
+    doc.line(14, 8, W - 14, 8);
+    doc.setLineDashPattern([], 0);
+    doc.setFontSize(6.5);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(muted[0], muted[1], muted[2]);
-    doc.text(`Order #${order.id.slice(-8).toUpperCase()}  —  continued`, W / 2, 14, { align: 'center' });
-    return 22;
+    doc.text(`#${order.id.slice(-8).toUpperCase()} — continued`, W / 2, 14, { align: 'center' });
+    return 20;
   };
 
   // Footer — rendered once on the last page only
@@ -393,7 +397,6 @@ export async function generateVIPOrderPDF(
     if (contentY > 262) {
       doc.addPage();
       contentY = setupContinuationPage();
-      contentY = drawTableHeader(contentY);
       rowAlt = false;
     }
 
@@ -472,83 +475,68 @@ export async function generateGoldenOrderPDF(
   const logo = await loadLogoBase64();
   const info = getPriceInfo(order);
 
-  const bg     = [250, 245, 230];
-  const accent = [160, 120, 40];
-  const light  = [210, 170, 80];
-  const dark   = [30,  25,  15];
-  const muted  = [110, 95,  70];
+  // Golden palette — white bg, forest green header, amber accents
+  const forest = [22, 55, 35];   // deep forest green
+  const amber  = [195, 145, 20]; // rich amber gold
+  const amberL = [220, 175, 60]; // light amber
+  const dark   = [20,  20,  20]; // near-black text
+  const muted  = [100, 100, 95]; // neutral grey
   const white  = [255, 255, 255];
 
   const W = 210;
 
-  const orn = (x: number, y: number, flip: boolean) => {
-    const sx = flip ? -1 : 1;
-    doc.setDrawColor(accent[0], accent[1], accent[2]);
-    doc.setLineWidth(0.5);
-    doc.line(x, y, x + sx * 10, y);
-    doc.line(x, y, x, y + 10);
-    doc.line(x + sx * 5, y, x + sx * 5, y + 5);
-    doc.line(x, y + 5, x + sx * 5, y + 5);
-  };
-
+  // Full header — first page only
   const setupGoldenFirstPage = () => {
-    doc.setFillColor(bg[0], bg[1], bg[2]);
+    // White background
+    doc.setFillColor(white[0], white[1], white[2]);
     doc.rect(0, 0, W, 297, 'F');
-    // Top accent bar
-    doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(0, 0, W, 6, 'F');
-    // Bottom accent bar
-    doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(0, 291, W, 6, 'F');
-    orn(14, 10, false);
-    orn(196, 10, true);
-    orn(14, 280, false);
-    orn(196, 280, true);
+    // Forest green header band
+    doc.setFillColor(forest[0], forest[1], forest[2]);
+    doc.rect(0, 0, W, 48, 'F');
+    // Amber rule below header
+    doc.setFillColor(amber[0], amber[1], amber[2]);
+    doc.rect(0, 48, W, 2, 'F');
     // Logo / title
     if (logo) {
-      doc.addImage(logo, 'PNG', W / 2 - 22, 8, 44, 24);
+      doc.addImage(logo, 'PNG', W / 2 - 25, 5, 50, 28);
     } else {
-      doc.setFontSize(18);
-      doc.setTextColor(accent[0], accent[1], accent[2]);
+      doc.setFontSize(20);
+      doc.setTextColor(amberL[0], amberL[1], amberL[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text('Instant-Play', W / 2, 20, { align: 'center' });
+      doc.text('Instant-Play', W / 2, 22, { align: 'center' });
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(muted[0], muted[1], muted[2]);
-      doc.text('SHOP', W / 2, 27, { align: 'center' });
+      doc.setTextColor(160, 180, 160);
+      doc.text('SHOP', W / 2, 30, { align: 'center' });
     }
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(light[0], light[1], light[2]);
-    doc.text('✦  G O L D E N  I N V O I C E  ✦', W / 2, 36, { align: 'center' });
-    // Gold rule
-    doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(14, 39, W - 28, 0.6, 'F');
-    return 50;
+    doc.setTextColor(amberL[0], amberL[1], amberL[2]);
+    doc.text('*  G O L D E N  I N V O I C E  *', W / 2, 42, { align: 'center' });
+    return 62;
   };
 
+  // Continuation page — white bg, no header, just a subtle top rule
   const setupGoldenContinuationPage = () => {
-    doc.setFillColor(bg[0], bg[1], bg[2]);
+    doc.setFillColor(white[0], white[1], white[2]);
     doc.rect(0, 0, W, 297, 'F');
-    doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(0, 0, W, 3, 'F');
-    doc.rect(0, 294, W, 3, 'F');
-    orn(14, 280, false);
-    orn(196, 280, true);
-    doc.setFontSize(7);
+    doc.setDrawColor(amber[0], amber[1], amber[2]);
+    doc.setLineWidth(0.3);
+    doc.setLineDashPattern([1, 2], 0);
+    doc.line(14, 8, W - 14, 8);
+    doc.setLineDashPattern([], 0);
+    doc.setFontSize(6.5);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(muted[0], muted[1], muted[2]);
-    doc.text(`Order #${order.id.slice(-8).toUpperCase()}  —  continued`, W / 2, 10, { align: 'center' });
-    doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(14, 13, W - 28, 0.4, 'F');
+    doc.text(`#${order.id.slice(-8).toUpperCase()} -- continued`, W / 2, 14, { align: 'center' });
     return 20;
   };
 
   const drawGoldenFooter = () => {
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'italic');
-    doc.setTextColor(light[0], light[1], light[2]);
-    doc.text('✦  Golden Invoice — Thank you for your order.  ✦', W / 2, 287, { align: 'center' });
+    doc.setTextColor(amber[0], amber[1], amber[2]);
+    doc.text('*  Golden Invoice -- Thank you for your order.  *', W / 2, 290, { align: 'center' });
   };
 
   let contentY = setupGoldenFirstPage();
@@ -560,7 +548,7 @@ export async function generateGoldenOrderPDF(
   doc.text('ORDER NUMBER', 14, contentY);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(dark[0], dark[1], dark[2]);
+  doc.setTextColor(forest[0], forest[1], forest[2]);
   doc.text(`#${order.id.slice(-8).toUpperCase()}`, 14, contentY + 7);
 
   doc.setFontSize(7);
@@ -573,18 +561,19 @@ export async function generateGoldenOrderPDF(
   doc.text(fmtDateTime(order.createdAt), 14, contentY + 22);
 
   // Status pill
-  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.setFillColor(forest[0], forest[1], forest[2]);
   doc.roundedRect(14, contentY + 26, 52, 7, 2, 2, 'F');
   doc.setFontSize(6.5);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(white[0], white[1], white[2]);
+  doc.setTextColor(amberL[0], amberL[1], amberL[2]);
   doc.text(statusLabel(order.status).toUpperCase(), 40, contentY + 31, { align: 'center' });
 
   contentY += 42;
 
   // ── Divider ─────────────────────────────────────────────────────────────────
-  doc.setFillColor(accent[0], accent[1], accent[2]);
-  doc.rect(14, contentY, W - 28, 0.5, 'F');
+  doc.setDrawColor(amber[0], amber[1], amber[2]);
+  doc.setLineWidth(0.5);
+  doc.line(14, contentY, W - 14, contentY);
   contentY += 8;
 
   // ── Info blocks ─────────────────────────────────────────────────────────────
@@ -612,23 +601,21 @@ export async function generateGoldenOrderPDF(
   contentY += 34 + (Math.max(payLines, platLines) - 1) * 5;
 
   // ── Items table ──────────────────────────────────────────────────────────────
-  const drawHeader = (y: number) => {
-    doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(14, y, W - 28, 0.5, 'F');
-    y += 7;
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(accent[0], accent[1], accent[2]);
-    doc.text('ITEM', 14, y);
-    doc.text('QTY', showUnitPrice ? 110 : 130, y);
-    if (showUnitPrice) doc.text('UNIT', 140, y);
-    doc.text('AMOUNT', showUnitPrice ? 175 : 165, y, { align: 'right' });
-    doc.setFillColor(light[0], light[1], light[2]);
-    doc.rect(14, y + 3, W - 28, 0.3, 'F');
-    return y + 10;
-  };
-
-  contentY = drawHeader(contentY);
+  doc.setDrawColor(amber[0], amber[1], amber[2]);
+  doc.setLineWidth(0.5);
+  doc.line(14, contentY, W - 14, contentY);
+  contentY += 7;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(forest[0], forest[1], forest[2]);
+  doc.text('ITEM', 14, contentY);
+  doc.text('QTY', showUnitPrice ? 110 : 130, contentY);
+  if (showUnitPrice) doc.text('UNIT', 140, contentY);
+  doc.text('AMOUNT', showUnitPrice ? 175 : 165, contentY, { align: 'right' });
+  doc.setDrawColor(amberL[0], amberL[1], amberL[2]);
+  doc.setLineWidth(0.3);
+  doc.line(14, contentY + 3, W - 14, contentY + 3);
+  contentY += 10;
 
   let rowAlt = false;
   doc.setFont('helvetica', 'normal');
@@ -641,12 +628,11 @@ export async function generateGoldenOrderPDF(
     if (contentY > 265) {
       doc.addPage();
       contentY = setupGoldenContinuationPage();
-      contentY = drawHeader(contentY);
       rowAlt = false;
     }
 
     if (rowAlt) {
-      doc.setFillColor(240, 232, 210);
+      doc.setFillColor(245, 248, 245);
       doc.rect(14, contentY - 5, W - 28, 7.5, 'F');
     }
     rowAlt = !rowAlt;
@@ -660,7 +646,7 @@ export async function generateGoldenOrderPDF(
       doc.text(`$${fmt(oi.price)}`, 140, contentY);
     }
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(dark[0], dark[1], dark[2]);
+    doc.setTextColor(forest[0], forest[1], forest[2]);
     doc.text(`$${fmt(sub)}`, showUnitPrice ? 175 : 165, contentY, { align: 'right' });
     contentY += 8;
   });
@@ -672,8 +658,9 @@ export async function generateGoldenOrderPDF(
   }
 
   contentY += 4;
-  doc.setFillColor(accent[0], accent[1], accent[2]);
-  doc.rect(110, contentY, W - 14 - 110, 0.5, 'F');
+  doc.setDrawColor(amber[0], amber[1], amber[2]);
+  doc.setLineWidth(0.4);
+  doc.line(110, contentY, W - 14, contentY);
   contentY += 7;
 
   const totRow = (label: string, val: string, color?: number[]) => {
@@ -694,11 +681,11 @@ export async function generateGoldenOrderPDF(
   }
 
   contentY += 2;
-  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.setFillColor(forest[0], forest[1], forest[2]);
   doc.roundedRect(110, contentY - 5, W - 14 - 110, 12, 2, 2, 'F');
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(white[0], white[1], white[2]);
+  doc.setTextColor(amberL[0], amberL[1], amberL[2]);
   doc.text('TOTAL', 116, contentY + 2.5);
   doc.setFontSize(12);
   doc.text(`$${fmt(orderTotal(order))}`, W - 16, contentY + 2.5, { align: 'right' });

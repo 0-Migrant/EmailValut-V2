@@ -431,14 +431,17 @@ export async function generateVIPOrderPDF(
   doc.line(110, contentY, W - 14, contentY);
   contentY += 7;
 
+  const totLabelX = 114;
+  const totValX   = W - 18;  // 4mm padding from the right edge of the box (box ends at W-14=196)
+
   const totRow = (label: string, val: string, color?: number[]) => {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(muted[0], muted[1], muted[2]);
-    doc.text(label, 115, contentY);
+    doc.text(label, totLabelX, contentY);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...(color ?? navy) as [number, number, number]);
-    doc.text(val, W - 14, contentY, { align: 'right' });
+    doc.text(val, totValX, contentY, { align: 'right' });
     contentY += 7;
   };
 
@@ -454,9 +457,9 @@ export async function generateVIPOrderPDF(
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(goldL[0], goldL[1], goldL[2]);
-  doc.text('TOTAL', 115, contentY + 2.5);
+  doc.text('TOTAL', totLabelX, contentY + 2.5);
   doc.setFontSize(12);
-  doc.text(`$${fmt(orderTotal(order))}`, W - 14, contentY + 2.5, { align: 'right' });
+  doc.text(`$${fmt(orderTotal(order))}`, totValX, contentY + 2.5, { align: 'right' });
 
   drawFooter();
   doc.save(`VIP_Invoice_${order.id.slice(-5)}_${order.customerId || 'VIP'}.pdf`);
@@ -661,14 +664,17 @@ export async function generateGoldenOrderPDF(
   doc.line(110, contentY, W - 14, contentY);
   contentY += 7;
 
+  const totLabelX = 114;
+  const totValX   = W - 18;
+
   const totRow = (label: string, val: string, color?: number[]) => {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(muted[0], muted[1], muted[2]);
-    doc.text(label, 115, contentY);
+    doc.text(label, totLabelX, contentY);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...(color ?? dark) as [number, number, number]);
-    doc.text(val, W - 14, contentY, { align: 'right' });
+    doc.text(val, totValX, contentY, { align: 'right' });
     contentY += 7;
   };
 
@@ -684,9 +690,9 @@ export async function generateGoldenOrderPDF(
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(amberL[0], amberL[1], amberL[2]);
-  doc.text('TOTAL', 115, contentY + 2.5);
+  doc.text('TOTAL', totLabelX, contentY + 2.5);
   doc.setFontSize(12);
-  doc.text(`$${fmt(orderTotal(order))}`, W - 14, contentY + 2.5, { align: 'right' });
+  doc.text(`$${fmt(orderTotal(order))}`, totValX, contentY + 2.5, { align: 'right' });
 
   drawGoldenFooter();
   doc.save(`Golden_Invoice_${order.id.slice(-5)}_${order.customerId || 'Order'}.pdf`);

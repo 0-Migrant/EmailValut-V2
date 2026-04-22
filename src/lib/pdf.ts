@@ -243,8 +243,6 @@ export async function generateVIPOrderPDF(
     doc.rect(0, 0, W, 50, 'F');
     doc.setFillColor(gold[0], gold[1], gold[2]);
     doc.rect(0, 50, W, 1.5, 'F');
-    orn(14, 283, false);
-    orn(196, 283, true);
     if (logo) {
       doc.addImage(logo, 'PNG', W / 2 - 28, 6, 56, 30);
     } else {
@@ -279,7 +277,7 @@ export async function generateVIPOrderPDF(
     doc.setFontSize(6.5);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(muted[0], muted[1], muted[2]);
-    doc.text(`#${order.id.slice(-8).toUpperCase()} — continued`, W / 2, 14, { align: 'center' });
+    doc.text(`#${order.id.slice(-8).toUpperCase()} -- continued`, W / 2, 14, { align: 'center' });
     return 20;
   };
 
@@ -461,6 +459,8 @@ export async function generateVIPOrderPDF(
   doc.setFontSize(12);
   doc.text(`$${fmt(orderTotal(order))}`, totValX, contentY + 2.5, { align: 'right' });
 
+  orn(14, 283, false);
+  orn(196, 283, true);
   drawFooter();
   doc.save(`VIP_Invoice_${order.id.slice(-5)}_${order.customerId || 'VIP'}.pdf`);
 }

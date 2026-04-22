@@ -225,31 +225,28 @@ export async function generateVIPOrderPDF(
 
   const W = 210;
 
-  // Apply VIP page styling (cream bg, navy header, gold rule, ornaments, logo, label)
-  const setupVIPPage = (isFirst: boolean) => {
+  const orn = (x: number, y: number, flip: boolean) => {
+    const sx = flip ? -1 : 1;
+    doc.setDrawColor(gold[0], gold[1], gold[2]);
+    doc.setLineWidth(0.6);
+    doc.line(x, y, x + sx * 12, y);
+    doc.line(x, y, x, y + 12);
+    doc.line(x + sx * 6, y, x + sx * 6, y + 6);
+    doc.line(x, y + 6, x + sx * 6, y + 6);
+  };
+
+  // Full VIP header — first page only
+  const setupFirstPage = () => {
     doc.setFillColor(cream[0], cream[1], cream[2]);
     doc.rect(0, 0, W, 297, 'F');
-
     doc.setFillColor(navy[0], navy[1], navy[2]);
     doc.rect(0, 0, W, 50, 'F');
-
     doc.setFillColor(gold[0], gold[1], gold[2]);
     doc.rect(0, 50, W, 1.5, 'F');
-
-    const orn = (x: number, y: number, flip: boolean) => {
-      const sx = flip ? -1 : 1;
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
-      doc.setLineWidth(0.6);
-      doc.line(x, y, x + sx * 12, y);
-      doc.line(x, y, x, y + 12);
-      doc.line(x + sx * 6, y, x + sx * 6, y + 6);
-      doc.line(x, y + 6, x + sx * 6, y + 6);
-    };
     orn(14, 55, false);
     orn(196, 55, true);
     orn(14, 283, false);
     orn(196, 283, true);
-
     if (logo) {
       doc.addImage(logo, 'PNG', W / 2 - 28, 6, 56, 30);
     } else {
@@ -262,22 +259,33 @@ export async function generateVIPOrderPDF(
       doc.setTextColor(180, 170, 140);
       doc.text('SHOP', W / 2, 30, { align: 'center' });
     }
-
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(goldL[0], goldL[1], goldL[2]);
     doc.text('*  V I P  I N V O I C E  *', W / 2, 43, { align: 'center' });
+    return 65;
+  };
 
-    // Footer on every page
+  // Minimal continuation page — cream bg + subtle gold accent only
+  const setupContinuationPage = () => {
+    doc.setFillColor(cream[0], cream[1], cream[2]);
+    doc.rect(0, 0, W, 297, 'F');
+    doc.setFillColor(gold[0], gold[1], gold[2]);
+    doc.rect(0, 8, W, 0.8, 'F');
+    orn(14, 283, false);
+    orn(196, 283, true);
+    return 18;
+  };
+
+  // Footer — rendered once on the last page only
+  const drawFooter = () => {
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(gold[0], gold[1], gold[2]);
     doc.text('*  Thank you for being a valued VIP customer. We treasure your loyalty.  *', W / 2, 286, { align: 'center' });
-
-    return isFirst ? 65 : 58; // contentY start
   };
 
-  let contentY = setupVIPPage(true);
+  let contentY = setupFirstPage();
   const hasImage = !!customerImage;
 
   // ── Customer photo (optional, first page only) ──────────────────────────────
@@ -380,7 +388,7 @@ export async function generateVIPOrderPDF(
 
     if (contentY > 262) {
       doc.addPage();
-      contentY = setupVIPPage(false);
+      contentY = setupContinuationPage();
       contentY = drawTableHeader(contentY);
       rowAlt = false;
     }
@@ -409,7 +417,7 @@ export async function generateVIPOrderPDF(
   // If totals won't fit on the current page, push to a new one
   if (contentY > 230) {
     doc.addPage();
-    contentY = setupVIPPage(false);
+    contentY = setupContinuationPage();
   }
 
   contentY += 4;
@@ -445,6 +453,7 @@ export async function generateVIPOrderPDF(
   doc.setFontSize(12);
   doc.text(`$${fmt(orderTotal(order))}`, W - 16, contentY + 2.5, { align: 'right' });
 
+  drawFooter();
   doc.save(`VIP_Invoice_${order.id.slice(-5)}_${order.customerId || 'VIP'}.pdf`);
 }
 

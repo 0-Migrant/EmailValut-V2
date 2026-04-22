@@ -225,67 +225,76 @@ export async function generateVIPOrderPDF(
 
   const W = 210;
 
-  // ── Full-page background tint ───────────────────────────────────────────────
-  doc.setFillColor(cream[0], cream[1], cream[2]);
-  doc.rect(0, 0, W, 297, 'F');
+  // Apply VIP page styling (cream bg, navy header, gold rule, ornaments, logo, label)
+  const setupVIPPage = (isFirst: boolean) => {
+    doc.setFillColor(cream[0], cream[1], cream[2]);
+    doc.rect(0, 0, W, 297, 'F');
 
-  // ── Top navy header band ────────────────────────────────────────────────────
-  doc.setFillColor(navy[0], navy[1], navy[2]);
-  doc.rect(0, 0, W, 50, 'F');
+    doc.setFillColor(navy[0], navy[1], navy[2]);
+    doc.rect(0, 0, W, 50, 'F');
 
-  // Thin gold rule below header
-  doc.setFillColor(gold[0], gold[1], gold[2]);
-  doc.rect(0, 50, W, 1.5, 'F');
+    doc.setFillColor(gold[0], gold[1], gold[2]);
+    doc.rect(0, 50, W, 1.5, 'F');
 
-  // ── Gold corner ornaments ───────────────────────────────────────────────────
-  const orn = (x: number, y: number, flip: boolean) => {
-    const sx = flip ? -1 : 1;
-    doc.setDrawColor(gold[0], gold[1], gold[2]);
-    doc.setLineWidth(0.6);
-    doc.line(x, y, x + sx * 12, y);
-    doc.line(x, y, x, y + 12);
-    doc.line(x + sx * 6, y, x + sx * 6, y + 6);
-    doc.line(x, y + 6, x + sx * 6, y + 6);
-  };
-  orn(14, 55, false);
-  orn(196, 55, true);
-  orn(14, 283, false);
-  orn(196, 283, true);
+    const orn = (x: number, y: number, flip: boolean) => {
+      const sx = flip ? -1 : 1;
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setLineWidth(0.6);
+      doc.line(x, y, x + sx * 12, y);
+      doc.line(x, y, x, y + 12);
+      doc.line(x + sx * 6, y, x + sx * 6, y + 6);
+      doc.line(x, y + 6, x + sx * 6, y + 6);
+    };
+    orn(14, 55, false);
+    orn(196, 55, true);
+    orn(14, 283, false);
+    orn(196, 283, true);
 
-  // ── Logo / title in header ──────────────────────────────────────────────────
-  if (logo) {
-    doc.addImage(logo, 'PNG', W / 2 - 28, 6, 56, 30);
-  } else {
-    doc.setFontSize(22);
-    doc.setTextColor(goldL[0], goldL[1], goldL[2]);
+    if (logo) {
+      doc.addImage(logo, 'PNG', W / 2 - 28, 6, 56, 30);
+    } else {
+      doc.setFontSize(22);
+      doc.setTextColor(goldL[0], goldL[1], goldL[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Instant-Play', W / 2, 22, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(180, 170, 140);
+      doc.text('SHOP', W / 2, 30, { align: 'center' });
+    }
+
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('Instant-Play', W / 2, 22, { align: 'center' });
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(180, 170, 140);
-    doc.text('SHOP', W / 2, 30, { align: 'center' });
-  }
+    doc.setTextColor(goldL[0], goldL[1], goldL[2]);
+    doc.text('*  V I P  I N V O I C E  *', W / 2, 43, { align: 'center' });
 
-  // ── "VIP INVOICE" label ─────────────────────────────────────────────────────
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(goldL[0], goldL[1], goldL[2]);
-  doc.text('*  V I P  I N V O I C E  *', W / 2, 43, { align: 'center' });
+    // Footer on every page
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(gold[0], gold[1], gold[2]);
+    doc.text('*  Thank you for being a valued VIP customer. We treasure your loyalty.  *', W / 2, 286, { align: 'center' });
 
-  // ── Customer photo (optional) ───────────────────────────────────────────────
-  let contentY = 65;
+    return isFirst ? 65 : 58; // contentY start
+  };
+
+  let contentY = setupVIPPage(true);
   const hasImage = !!customerImage;
 
+  // ── Customer photo (optional, first page only) ──────────────────────────────
   if (hasImage) {
     const imgX = W - 14 - 35 - 20;
     const imgY = 58;
-    // Gold frame
     doc.setFillColor(gold[0], gold[1], gold[2]);
     doc.roundedRect(imgX - 2, imgY - 2, 39, 39, 3, 3, 'F');
     doc.addImage(customerImage!, 'JPEG', imgX, imgY, 35, 35);
   }
 
   // ── Order meta ──────────────────────────────────────────────────────────────
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(muted[0], muted[1], muted[2]);
+  doc.text('ORDER NUMBER', 14, contentY);
+
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(navy[0], navy[1], navy[2]);
@@ -294,18 +303,12 @@ export async function generateVIPOrderPDF(
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(muted[0], muted[1], muted[2]);
-  doc.text('ORDER NUMBER', 14, contentY);
-
-  // Date
-  doc.setFontSize(8);
-  doc.setTextColor(muted[0], muted[1], muted[2]);
   doc.text('DATE', 14, contentY + 16);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(navy[0], navy[1], navy[2]);
   doc.text(fmtDateTime(order.createdAt), 14, contentY + 22);
 
-  // Status pill
   doc.setFillColor(gold[0], gold[1], gold[2]);
   doc.roundedRect(14, contentY + 28, 52, 8, 2, 2, 'F');
   doc.setFontSize(7);
@@ -321,61 +324,74 @@ export async function generateVIPOrderPDF(
   doc.line(14, contentY, W - 14, contentY);
   contentY += 8;
 
-  // ── Customer + Worker info row ───────────────────────────────────────────────
-  const colW = hasImage ? (W - 14 - 40) / 2 : (W - 28) / 2;
+  // ── Customer + Worker + Payment + Platform info ──────────────────────────────
+  const colW = (W - 28) / 2;
 
-  const infoBlock = (label: string, value: string, x: number, y: number, maxWidth?: number) => {
+  const infoBlock = (label: string, value: string, x: number, y: number): number => {
+    const maxW = colW - 6;
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(muted[0], muted[1], muted[2]);
     doc.text(label.toUpperCase(), x, y);
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(navy[0], navy[1], navy[2]);
-    const lines = maxWidth ? doc.splitTextToSize(value, maxWidth) : [value];
-    doc.text(lines[0], x, y + 6);
+    const lines = doc.splitTextToSize(value, maxW) as string[];
+    const rendered = lines.slice(0, 2);
+    rendered.forEach((line, i) => doc.text(line, x, y + 6 + i * 5));
+    return rendered.length;
   };
 
-  infoBlock('Customer', order.customerId || 'VIP Guest', 14, contentY, colW - 4);
-  infoBlock('Worker', dm?.name || '-', 14 + colW, contentY, colW - 4);
-  infoBlock('Payment', `${order.paymentMethod || '-'}${order.paymentDetail ? ` - ${order.paymentDetail}` : ''}`, 14, contentY + 16, colW - 4);
-  if (order.source) infoBlock('Platform', order.source, 14 + colW, contentY + 16, colW - 4);
+  infoBlock('Customer', order.customerId || 'VIP Guest', 14, contentY);
+  infoBlock('Worker', dm?.name || '-', 14 + colW, contentY);
+  const payLines = infoBlock('Payment', `${order.paymentMethod || '-'}${order.paymentDetail ? ` - ${order.paymentDetail}` : ''}`, 14, contentY + 16);
+  const platLines = order.source ? infoBlock('Platform', order.source, 14 + colW, contentY + 16) : 1;
+  const extraLines = Math.max(payLines, platLines) - 1;
 
-  contentY += 34;
+  contentY += 34 + extraLines * 5;
 
   // ── Items table ──────────────────────────────────────────────────────────────
-  doc.setDrawColor(gold[0], gold[1], gold[2]);
-  doc.setLineWidth(0.4);
-  doc.line(14, contentY, W - 14, contentY);
+  const drawTableHeader = (y: number) => {
+    doc.setDrawColor(gold[0], gold[1], gold[2]);
+    doc.setLineWidth(0.4);
+    doc.line(14, y, W - 14, y);
+    y += 7;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(gold[0], gold[1], gold[2]);
+    doc.text('ITEM', 14, y);
+    doc.text('QTY', showUnitPrice ? 110 : 130, y);
+    if (showUnitPrice) doc.text('UNIT', 140, y);
+    doc.text('AMOUNT', showUnitPrice ? 175 : 165, y, { align: 'right' });
+    doc.setDrawColor(goldL[0], goldL[1], goldL[2]);
+    doc.setLineWidth(0.3);
+    doc.line(14, y + 3, W - 14, y + 3);
+    return y + 10;
+  };
 
-  // Header row
-  contentY += 7;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(gold[0], gold[1], gold[2]);
-  doc.text('ITEM', 14, contentY);
-  doc.text('QTY', showUnitPrice ? 110 : 130, contentY);
-  if (showUnitPrice) doc.text('UNIT', 140, contentY);
-  doc.text('AMOUNT', showUnitPrice ? 175 : 165, contentY, { align: 'right' });
+  contentY = drawTableHeader(contentY);
 
-  doc.setDrawColor(goldL[0], goldL[1], goldL[2]);
-  doc.setLineWidth(0.3);
-  doc.line(14, contentY + 3, W - 14, contentY + 3);
-
-  contentY += 10;
-
-  // Rows
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   let rowAlt = false;
   order.items.forEach((oi) => {
     const item = items.find(i => i.id === oi.itemId);
     const sub = oi.price * oi.qty;
+
+    if (contentY > 262) {
+      doc.addPage();
+      contentY = setupVIPPage(false);
+      contentY = drawTableHeader(contentY);
+      rowAlt = false;
+    }
+
     if (rowAlt) {
       doc.setFillColor(245, 238, 215);
       doc.rect(14, contentY - 5, W - 28, 7.5, 'F');
     }
     rowAlt = !rowAlt;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
     doc.setTextColor(navy[0], navy[1], navy[2]);
     doc.text(item?.name || 'Unknown', 14, contentY);
     doc.text(String(oi.qty), showUnitPrice ? 113 : 133, contentY);
@@ -386,12 +402,16 @@ export async function generateVIPOrderPDF(
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(navy[0], navy[1], navy[2]);
     doc.text(`$${fmt(sub)}`, showUnitPrice ? 175 : 165, contentY, { align: 'right' });
-    doc.setFont('helvetica', 'normal');
     contentY += 8;
-    if (contentY > 260) { doc.addPage(); contentY = 20; }
   });
 
   // ── Totals ───────────────────────────────────────────────────────────────────
+  // If totals won't fit on the current page, push to a new one
+  if (contentY > 230) {
+    doc.addPage();
+    contentY = setupVIPPage(false);
+  }
+
   contentY += 4;
   doc.setDrawColor(gold[0], gold[1], gold[2]);
   doc.setLineWidth(0.4);
@@ -424,12 +444,6 @@ export async function generateVIPOrderPDF(
   doc.text('TOTAL', 116, contentY + 2.5);
   doc.setFontSize(12);
   doc.text(`$${fmt(orderTotal(order))}`, W - 16, contentY + 2.5, { align: 'right' });
-
-  // ── Footer ───────────────────────────────────────────────────────────────────
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(gold[0], gold[1], gold[2]);
-  doc.text('*  Thank you for being a valued VIP customer. We treasure your loyalty.  *', W / 2, 286, { align: 'center' });
 
   doc.save(`VIP_Invoice_${order.id.slice(-5)}_${order.customerId || 'VIP'}.pdf`);
 }

@@ -324,7 +324,7 @@ export async function generateVIPOrderPDF(
   // ── Customer + Worker info row ───────────────────────────────────────────────
   const colW = hasImage ? (W - 14 - 40) / 2 : (W - 28) / 2;
 
-  const infoBlock = (label: string, value: string, x: number, y: number) => {
+  const infoBlock = (label: string, value: string, x: number, y: number, maxWidth?: number) => {
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(muted[0], muted[1], muted[2]);
@@ -332,13 +332,14 @@ export async function generateVIPOrderPDF(
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(navy[0], navy[1], navy[2]);
-    doc.text(value, x, y + 6);
+    const lines = maxWidth ? doc.splitTextToSize(value, maxWidth) : [value];
+    doc.text(lines[0], x, y + 6);
   };
 
-  infoBlock('Customer', order.customerId || 'VIP Guest', 14, contentY);
-  infoBlock('Worker', dm?.name || '-', 14 + colW, contentY);
-  infoBlock('Payment', `${order.paymentMethod || '-'}${order.paymentDetail ? ` - ${order.paymentDetail}` : ''}`, 14, contentY + 16);
-  if (order.source) infoBlock('Platform', order.source, 14 + colW, contentY + 16);
+  infoBlock('Customer', order.customerId || 'VIP Guest', 14, contentY, colW - 4);
+  infoBlock('Worker', dm?.name || '-', 14 + colW, contentY, colW - 4);
+  infoBlock('Payment', `${order.paymentMethod || '-'}${order.paymentDetail ? ` - ${order.paymentDetail}` : ''}`, 14, contentY + 16, colW - 4);
+  if (order.source) infoBlock('Platform', order.source, 14 + colW, contentY + 16, colW - 4);
 
   contentY += 34;
 

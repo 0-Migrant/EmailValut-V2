@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { fmt, fmtTime, orderTotal, statusBadgeClass } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -5,6 +6,7 @@ import Icon from '@/components/Icon';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [showAllItemsModal, setShowAllItemsModal] = useState(false);
   const orders      = useVaultStore((s) => s.orders);
   const items       = useVaultStore((s) => s.items);
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
@@ -20,8 +22,9 @@ export default function Dashboard() {
 
   const itemCounts: Record<string, number> = {};
   doneOrders.forEach((o) => o.items.forEach((oi) => { itemCounts[oi.itemId] = (itemCounts[oi.itemId] || 0) + oi.qty; }));
-  const topItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const allSortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])
     .map(([id, qty]) => ({ item: items.find((i) => i.id === id), qty })).filter((x) => x.item);
+  const topItems = allSortedItems.slice(0, 5);
 
   const dmRevenue: Record<string, number> = {};
   doneOrders.forEach((o) => { dmRevenue[o.deliveryManId] = (dmRevenue[o.deliveryManId] || 0) + orderTotal(o); });
@@ -46,15 +49,52 @@ export default function Dashboard() {
       </div>
 
       <div className="grid-2" style={{ marginBottom: 20 }}>
-        <div className="card">
-          <div className="card-title">Top Selling Items</div>
-          {topItems.length ? topItems.map((x) => (
-            <div key={x.item!.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:'1px solid var(--border-row)' }}>
-              <span style={{ fontSize:13, fontWeight:500 }}>{x.item!.name}</span>
-              <span className="badge badge-info">×{x.qty}</span>
-            </div>
-          )) : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon"><Icon name="bundles" size={28} /></div>No sales yet</div>}
+        <div className="card" style={{ display:'flex', flexDirection:'column' }}>
+          <div className="card-title" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span>Top Selling Items</span>
+            {allSortedItems.length > 5 && (
+              <button className="btn btn-ghost btn-xs" style={{ fontSize:12, fontWeight:600 }} onClick={() => setShowAllItemsModal(true)}>
+                See All ({allSortedItems.length}) →
+              </button>
+            )}
+          </div>
+          {topItems.length
+            ? <div style={{ display:'flex', flexDirection:'column', flex:1, justifyContent:'space-between' }}>
+                {topItems.map((x, i) => (
+                  <div key={x.item!.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:'1px solid var(--border-row)' }}>
+                    <span style={{ fontSize:13, fontWeight:500 }}>
+                      <span style={{ fontSize:11, color:'var(--text-hint)', marginRight:6, fontWeight:700 }}>#{i+1}</span>
+                      {x.item!.name}
+                    </span>
+                    <span className="badge badge-info">×{x.qty}</span>
+                  </div>
+                ))}
+              </div>
+            : <div className="empty-state" style={{ padding:'20px 0' }}><div className="empty-icon"><Icon name="bundles" size={28} /></div>No sales yet</div>}
         </div>
+
+        {/* All Items popup */}
+        {showAllItemsModal && (
+          <div className="modal-bg" onClick={() => setShowAllItemsModal(false)}>
+            <div className="modal" style={{ maxWidth: 460, maxHeight: '80vh', display:'flex', flexDirection:'column' }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                <h3 style={{ margin:0 }}>All Selling Items</h3>
+                <button className="btn btn-ghost btn-xs" onClick={() => setShowAllItemsModal(false)}><Icon name="x" size={13} /></button>
+              </div>
+              <div style={{ overflowY:'auto', flex:1 }}>
+                {allSortedItems.map((x, i) => (
+                  <div key={x.item!.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:'1px solid var(--border-row)' }}>
+                    <span style={{ fontSize:13, fontWeight:500 }}>
+                      <span style={{ fontSize:11, color:'var(--text-hint)', marginRight:6, fontWeight:700 }}>#{i+1}</span>
+                      {x.item!.name}
+                    </span>
+                    <span className="badge badge-info">×{x.qty}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="card">
           <div className="card-title">Worker Performance</div>
           {deliveryMen.length ? deliveryMen.map((dm) => {

@@ -21,7 +21,8 @@ export default function Earnings() {
   const addPayouts      = useVaultStore((s) => s.addPayouts);
   const markPayoutPaid    = useVaultStore((s) => s.markPayoutPaid);
   const partialOutPayout  = useVaultStore((s) => s.partialOutPayout);
-  const deletePayout      = useVaultStore((s) => s.deletePayout);
+  const deletePayout            = useVaultStore((s) => s.deletePayout);
+  const restorePayoutToPending  = useVaultStore((s) => s.restorePayoutToPending);
 
   const [selectedWorker, setSelectedWorker] = useState('all');
 
@@ -126,12 +127,22 @@ export default function Earnings() {
   }
 
   function handleDelete(id: string) {
-    const pass = window.prompt('🔐 Enter admin password to delete this transaction:');
-    if (pass === null) return;
-    if (pass !== 'arerede2000.') {
-      alert('❌ Incorrect password. Deletion cancelled.');
+    const payout = payouts.find((p) => p.id === id);
+    if (!payout) return;
+
+    // Paid payouts → offer to restore to pending so the amount is actionable again
+    if (payout.status === 'paid') {
+      const pass = window.prompt('Enter admin password to cancel this paid transaction (amount returns to pending):');
+      if (pass === null) return;
+      if (pass !== 'arerede2000.') { alert('❌ Incorrect password.'); return; }
+      restorePayoutToPending(id);
       return;
     }
+
+    // Pending payouts → full delete, amount returns to pool
+    const pass = window.prompt('Enter admin password to delete this transaction:');
+    if (pass === null) return;
+    if (pass !== 'arerede2000.') { alert('❌ Incorrect password. Deletion cancelled.'); return; }
     deletePayout(id);
   }
 

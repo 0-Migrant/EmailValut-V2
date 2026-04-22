@@ -56,6 +56,7 @@ interface AppActions {
   markPayoutPaid: (id: string) => void;
   partialOutPayout: (id: string, outAmount: number) => void;
   deletePayout: (id: string) => void;
+  restorePayoutToPending: (id: string) => void;
 
   // Credentials
   addCredential: (data: Omit<Credential, 'id' | 'stocks' | 'added'>) => void;
@@ -373,6 +374,9 @@ export const useVaultStore = create<VaultStore>()(
       },
       deletePayout(id) {
         set((s) => ({ payouts: s.payouts.filter((p) => p.id !== id) }));
+      },
+      restorePayoutToPending(id) {
+        set((s) => ({ payouts: s.payouts.map((p) => p.id === id ? { ...p, status: 'pending' as const } : p) }));
       },
 
       // ── Credentials ───────────────────────────────────────────────────────

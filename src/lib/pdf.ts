@@ -263,7 +263,7 @@ export async function generateVIPOrderPDF(
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(goldL[0], goldL[1], goldL[2]);
     doc.text('*  V I P  I N V O I C E  *', W / 2, 43, { align: 'center' });
-    return 65;
+    return 75;
   };
 
   // Minimal continuation page — cream bg, no header repeat
@@ -456,9 +456,9 @@ export async function generateVIPOrderPDF(
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(goldL[0], goldL[1], goldL[2]);
-  doc.text('TOTAL', 116, contentY + 2.5);
+  doc.text('TOTAL', 115, contentY + 2.5);
   doc.setFontSize(12);
-  doc.text(`$${fmt(orderTotal(order))}`, W - 16, contentY + 2.5, { align: 'right' });
+  doc.text(`$${fmt(orderTotal(order))}`, W - 14, contentY + 2.5, { align: 'right' });
 
   drawFooter();
   doc.save(`VIP_Invoice_${order.id.slice(-5)}_${order.customerId || 'VIP'}.pdf`);
@@ -686,9 +686,9 @@ export async function generateGoldenOrderPDF(
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(amberL[0], amberL[1], amberL[2]);
-  doc.text('TOTAL', 116, contentY + 2.5);
+  doc.text('TOTAL', 115, contentY + 2.5);
   doc.setFontSize(12);
-  doc.text(`$${fmt(orderTotal(order))}`, W - 16, contentY + 2.5, { align: 'right' });
+  doc.text(`$${fmt(orderTotal(order))}`, W - 14, contentY + 2.5, { align: 'right' });
 
   drawGoldenFooter();
   doc.save(`Golden_Invoice_${order.id.slice(-5)}_${order.customerId || 'Order'}.pdf`);

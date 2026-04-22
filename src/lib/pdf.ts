@@ -266,7 +266,7 @@ export async function generateVIPOrderPDF(
     return 65;
   };
 
-  // Minimal continuation page — cream bg + subtle gold accent only
+  // Minimal continuation page — cream bg + subtle gold rule + order reference
   const setupContinuationPage = () => {
     doc.setFillColor(cream[0], cream[1], cream[2]);
     doc.rect(0, 0, W, 297, 'F');
@@ -274,7 +274,11 @@ export async function generateVIPOrderPDF(
     doc.rect(0, 8, W, 0.8, 'F');
     orn(14, 283, false);
     orn(196, 283, true);
-    return 18;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(muted[0], muted[1], muted[2]);
+    doc.text(`Order #${order.id.slice(-8).toUpperCase()}  —  continued`, W / 2, 14, { align: 'center' });
+    return 22;
   };
 
   // Footer — rendered once on the last page only
@@ -455,6 +459,252 @@ export async function generateVIPOrderPDF(
 
   drawFooter();
   doc.save(`VIP_Invoice_${order.id.slice(-5)}_${order.customerId || 'VIP'}.pdf`);
+}
+
+export async function generateGoldenOrderPDF(
+  order: Order,
+  items: Item[],
+  dm?: DeliveryMan,
+  showUnitPrice = false,
+  showDiscount = true,
+) {
+  const doc = new jsPDF();
+  const logo = await loadLogoBase64();
+  const info = getPriceInfo(order);
+
+  const bg     = [250, 245, 230];
+  const accent = [160, 120, 40];
+  const light  = [210, 170, 80];
+  const dark   = [30,  25,  15];
+  const muted  = [110, 95,  70];
+  const white  = [255, 255, 255];
+
+  const W = 210;
+
+  const orn = (x: number, y: number, flip: boolean) => {
+    const sx = flip ? -1 : 1;
+    doc.setDrawColor(accent[0], accent[1], accent[2]);
+    doc.setLineWidth(0.5);
+    doc.line(x, y, x + sx * 10, y);
+    doc.line(x, y, x, y + 10);
+    doc.line(x + sx * 5, y, x + sx * 5, y + 5);
+    doc.line(x, y + 5, x + sx * 5, y + 5);
+  };
+
+  const setupGoldenFirstPage = () => {
+    doc.setFillColor(bg[0], bg[1], bg[2]);
+    doc.rect(0, 0, W, 297, 'F');
+    // Top accent bar
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.rect(0, 0, W, 6, 'F');
+    // Bottom accent bar
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.rect(0, 291, W, 6, 'F');
+    orn(14, 10, false);
+    orn(196, 10, true);
+    orn(14, 280, false);
+    orn(196, 280, true);
+    // Logo / title
+    if (logo) {
+      doc.addImage(logo, 'PNG', W / 2 - 22, 8, 44, 24);
+    } else {
+      doc.setFontSize(18);
+      doc.setTextColor(accent[0], accent[1], accent[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Instant-Play', W / 2, 20, { align: 'center' });
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(muted[0], muted[1], muted[2]);
+      doc.text('SHOP', W / 2, 27, { align: 'center' });
+    }
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(light[0], light[1], light[2]);
+    doc.text('✦  G O L D E N  I N V O I C E  ✦', W / 2, 36, { align: 'center' });
+    // Gold rule
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.rect(14, 39, W - 28, 0.6, 'F');
+    return 50;
+  };
+
+  const setupGoldenContinuationPage = () => {
+    doc.setFillColor(bg[0], bg[1], bg[2]);
+    doc.rect(0, 0, W, 297, 'F');
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.rect(0, 0, W, 3, 'F');
+    doc.rect(0, 294, W, 3, 'F');
+    orn(14, 280, false);
+    orn(196, 280, true);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(muted[0], muted[1], muted[2]);
+    doc.text(`Order #${order.id.slice(-8).toUpperCase()}  —  continued`, W / 2, 10, { align: 'center' });
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.rect(14, 13, W - 28, 0.4, 'F');
+    return 20;
+  };
+
+  const drawGoldenFooter = () => {
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(light[0], light[1], light[2]);
+    doc.text('✦  Golden Invoice — Thank you for your order.  ✦', W / 2, 287, { align: 'center' });
+  };
+
+  let contentY = setupGoldenFirstPage();
+
+  // ── Order meta ──────────────────────────────────────────────────────────────
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(muted[0], muted[1], muted[2]);
+  doc.text('ORDER NUMBER', 14, contentY);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(dark[0], dark[1], dark[2]);
+  doc.text(`#${order.id.slice(-8).toUpperCase()}`, 14, contentY + 7);
+
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(muted[0], muted[1], muted[2]);
+  doc.text('DATE', 14, contentY + 16);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(dark[0], dark[1], dark[2]);
+  doc.text(fmtDateTime(order.createdAt), 14, contentY + 22);
+
+  // Status pill
+  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.roundedRect(14, contentY + 26, 52, 7, 2, 2, 'F');
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(white[0], white[1], white[2]);
+  doc.text(statusLabel(order.status).toUpperCase(), 40, contentY + 31, { align: 'center' });
+
+  contentY += 42;
+
+  // ── Divider ─────────────────────────────────────────────────────────────────
+  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.rect(14, contentY, W - 28, 0.5, 'F');
+  contentY += 8;
+
+  // ── Info blocks ─────────────────────────────────────────────────────────────
+  const colW = (W - 28) / 2;
+
+  const infoBlock = (label: string, value: string, x: number, y: number) => {
+    const maxW = colW - 6;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(muted[0], muted[1], muted[2]);
+    doc.text(label.toUpperCase(), x, y);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(dark[0], dark[1], dark[2]);
+    const lines = doc.splitTextToSize(value, maxW) as string[];
+    const rendered = lines.slice(0, 2);
+    rendered.forEach((line, i) => doc.text(line, x, y + 6 + i * 5));
+    return rendered.length;
+  };
+
+  infoBlock('Customer', order.customerId || 'Guest', 14, contentY);
+  infoBlock('Worker', dm?.name || '-', 14 + colW, contentY);
+  const payLines  = infoBlock('Payment', `${order.paymentMethod || '-'}${order.paymentDetail ? ` - ${order.paymentDetail}` : ''}`, 14, contentY + 16);
+  const platLines = order.source ? infoBlock('Platform', order.source, 14 + colW, contentY + 16) : 1;
+  contentY += 34 + (Math.max(payLines, platLines) - 1) * 5;
+
+  // ── Items table ──────────────────────────────────────────────────────────────
+  const drawHeader = (y: number) => {
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.rect(14, y, W - 28, 0.5, 'F');
+    y += 7;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(accent[0], accent[1], accent[2]);
+    doc.text('ITEM', 14, y);
+    doc.text('QTY', showUnitPrice ? 110 : 130, y);
+    if (showUnitPrice) doc.text('UNIT', 140, y);
+    doc.text('AMOUNT', showUnitPrice ? 175 : 165, y, { align: 'right' });
+    doc.setFillColor(light[0], light[1], light[2]);
+    doc.rect(14, y + 3, W - 28, 0.3, 'F');
+    return y + 10;
+  };
+
+  contentY = drawHeader(contentY);
+
+  let rowAlt = false;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+
+  order.items.forEach((oi) => {
+    const item = items.find(i => i.id === oi.itemId);
+    const sub = oi.price * oi.qty;
+
+    if (contentY > 265) {
+      doc.addPage();
+      contentY = setupGoldenContinuationPage();
+      contentY = drawHeader(contentY);
+      rowAlt = false;
+    }
+
+    if (rowAlt) {
+      doc.setFillColor(240, 232, 210);
+      doc.rect(14, contentY - 5, W - 28, 7.5, 'F');
+    }
+    rowAlt = !rowAlt;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(dark[0], dark[1], dark[2]);
+    doc.text(item?.name || 'Unknown', 14, contentY);
+    doc.text(String(oi.qty), showUnitPrice ? 113 : 133, contentY);
+    if (showUnitPrice) {
+      doc.setTextColor(muted[0], muted[1], muted[2]);
+      doc.text(`$${fmt(oi.price)}`, 140, contentY);
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(dark[0], dark[1], dark[2]);
+    doc.text(`$${fmt(sub)}`, showUnitPrice ? 175 : 165, contentY, { align: 'right' });
+    contentY += 8;
+  });
+
+  // ── Totals ───────────────────────────────────────────────────────────────────
+  if (contentY > 235) {
+    doc.addPage();
+    contentY = setupGoldenContinuationPage();
+  }
+
+  contentY += 4;
+  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.rect(110, contentY, W - 14 - 110, 0.5, 'F');
+  contentY += 7;
+
+  const totRow = (label: string, val: string, color?: number[]) => {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(muted[0], muted[1], muted[2]);
+    doc.text(label, 115, contentY);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...(color ?? dark) as [number, number, number]);
+    doc.text(val, W - 14, contentY, { align: 'right' });
+    contentY += 7;
+  };
+
+  totRow('Subtotal', `$${fmt(info.itemsTotal)}`);
+  if (showDiscount) {
+    if (info.type === 'discount')  totRow(`Discount  -${info.pct}%`, `-$${fmt(info.saved)}`,  [34, 160, 80]);
+    if (info.type === 'surcharge') totRow(`Surcharge +${info.pct}%`, `+$${fmt(info.extra)}`, [200, 100, 20]);
+  }
+
+  contentY += 2;
+  doc.setFillColor(accent[0], accent[1], accent[2]);
+  doc.roundedRect(110, contentY - 5, W - 14 - 110, 12, 2, 2, 'F');
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(white[0], white[1], white[2]);
+  doc.text('TOTAL', 116, contentY + 2.5);
+  doc.setFontSize(12);
+  doc.text(`$${fmt(orderTotal(order))}`, W - 16, contentY + 2.5, { align: 'right' });
+
+  drawGoldenFooter();
+  doc.save(`Golden_Invoice_${order.id.slice(-5)}_${order.customerId || 'Order'}.pdf`);
 }
 
 export function generateCredentialsPDF(credentials: Credential[]) {

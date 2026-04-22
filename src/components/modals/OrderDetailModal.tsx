@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { useVaultStore } from '@/lib/store';
 import { fmt, fmtDateTime, orderTotal, orderItemsTotal, getPriceInfo, statusBadgeClass, statusLabel } from '@/lib/utils';
-import { generateOrderPDF, generateVIPOrderPDF } from '@/lib/pdf';
+import { generateOrderPDF, generateGoldenOrderPDF, generateVIPOrderPDF } from '@/lib/pdf';
 import Icon from '@/components/Icon';
 
 
@@ -17,7 +17,7 @@ export default function OrderDetailModal() {
   const [showUnitPrice,  setShowUnitPrice]  = useState(false);
   const [showDiscount,   setShowDiscount]   = useState(true);
   const [editingSource,  setEditingSource]  = useState(false);
-  const [pdfTemplate,    setPdfTemplate]    = useState<'standard' | 'vip'>('standard');
+  const [pdfTemplate,    setPdfTemplate]    = useState<'standard' | 'golden' | 'vip'>('standard');
   const [vipImage,       setVipImage]       = useState<string | null>(null);
 
   function handleVipImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -31,6 +31,8 @@ export default function OrderDetailModal() {
   function handleDownloadPDF() {
     if (pdfTemplate === 'vip') {
       void generateVIPOrderPDF(order!, items, dm, showUnitPrice, showDiscount, vipImage);
+    } else if (pdfTemplate === 'golden') {
+      void generateGoldenOrderPDF(order!, items, dm, showUnitPrice, showDiscount);
     } else {
       void generateOrderPDF(order!, items, dm, showUnitPrice, showDiscount);
     }
@@ -150,11 +152,18 @@ export default function OrderDetailModal() {
                 style={{ borderRadius: 0, border: 'none' }}
                 onClick={() => setPdfTemplate('standard')}
               >
-                <Icon name="pdf" size={12} style={{ marginRight: 4 }} />Standard
+                <Icon name="pdf" size={12} style={{ marginRight: 4 }} />Client
+              </button>
+              <button
+                className={`btn btn-sm ${pdfTemplate === 'golden' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ borderRadius: 0, border: 'none', background: pdfTemplate === 'golden' ? 'linear-gradient(135deg,#a07828,#d2aa50)' : undefined, color: pdfTemplate === 'golden' ? '#fff' : undefined, borderColor: 'transparent' }}
+                onClick={() => setPdfTemplate('golden')}
+              >
+                ✦ Golden
               </button>
               <button
                 className={`btn btn-sm ${pdfTemplate === 'vip' ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ borderRadius: 0, border: 'none', background: pdfTemplate === 'vip' ? 'linear-gradient(135deg,#b48c3c,#d4af5a)' : undefined, borderColor: 'transparent' }}
+                style={{ borderRadius: 0, border: 'none', background: pdfTemplate === 'vip' ? 'linear-gradient(135deg,#b48c3c,#d4af5a)' : undefined, color: pdfTemplate === 'vip' ? '#fff' : undefined, borderColor: 'transparent' }}
                 onClick={() => setPdfTemplate('vip')}
               >
                 ✦ VIP
@@ -201,13 +210,15 @@ export default function OrderDetailModal() {
         <div className="modal-actions">
           <button
             className="btn btn-sm"
-            style={pdfTemplate === 'vip'
-              ? { background: 'linear-gradient(135deg,#b48c3c,#d4af5a)', color: '#fff', border: 'none' }
-              : { background: 'var(--accent)', color: '#fff', border: 'none' }}
+            style={
+              pdfTemplate === 'vip'    ? { background: 'linear-gradient(135deg,#b48c3c,#d4af5a)', color: '#fff', border: 'none' } :
+              pdfTemplate === 'golden' ? { background: 'linear-gradient(135deg,#a07828,#d2aa50)', color: '#fff', border: 'none' } :
+                                         { background: 'var(--accent)', color: '#fff', border: 'none' }
+            }
             onClick={handleDownloadPDF}
           >
             <Icon name="download" size={13} style={{ marginRight: 5 }} />
-            {pdfTemplate === 'vip' ? '✦ Download VIP Invoice' : 'Download PDF'}
+            {pdfTemplate === 'vip' ? '✦ Download VIP Invoice' : pdfTemplate === 'golden' ? '✦ Download Golden Invoice' : 'Download Invoice'}
           </button>
           {order.status === 'waiting' && <>
             <button className="btn btn-success btn-sm" onClick={() => handleStatus('accepted')}><Icon name="check" size={13} style={{ marginRight: 4 }} />Accept</button>

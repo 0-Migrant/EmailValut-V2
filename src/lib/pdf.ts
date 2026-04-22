@@ -243,8 +243,6 @@ export async function generateVIPOrderPDF(
     doc.rect(0, 0, W, 50, 'F');
     doc.setFillColor(gold[0], gold[1], gold[2]);
     doc.rect(0, 50, W, 1.5, 'F');
-    orn(14, 55, false);
-    orn(196, 55, true);
     orn(14, 283, false);
     orn(196, 283, true);
     if (logo) {
@@ -263,7 +261,7 @@ export async function generateVIPOrderPDF(
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(goldL[0], goldL[1], goldL[2]);
     doc.text('*  V I P  I N V O I C E  *', W / 2, 43, { align: 'center' });
-    return 75;
+    return 65;
   };
 
   // Minimal continuation page — cream bg, no header repeat

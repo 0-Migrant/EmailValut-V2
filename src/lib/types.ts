@@ -114,6 +114,7 @@ export interface Settings {
   platforms: string[];
   platformFees: PlatformFee[];
   wallets: Wallet[];
+  hideResourceAccounts: boolean;
 }
 
 export interface BundleItem {

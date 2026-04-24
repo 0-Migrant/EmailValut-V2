@@ -1128,6 +1128,237 @@ input[type=radio] {
   margin-top: 2px
 }
 
+/* SETTINGS RESTYLE */
+.settings-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border)
+}
+
+.settings-section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0
+}
+
+.settings-section-icon svg,
+.settings-section-icon .icon { color: #fff; fill: #fff }
+
+.settings-section-text { min-width: 0 }
+
+.settings-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main)
+}
+
+.settings-section-sub {
+  font-size: 12px;
+  color: var(--text-hint);
+  margin-top: 2px
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0
+}
+
+.toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0
+}
+
+.toggle-track {
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border-inp);
+  transition: background .2s;
+  position: relative;
+  display: block
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  left: 3px;
+  transition: transform .2s, background .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2)
+}
+
+.toggle input:checked + .toggle-track {
+  background: var(--accent)
+}
+
+.toggle input:checked + .toggle-track::after {
+  transform: translateX(18px)
+}
+
+/* Payment method items */
+.pm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px
+}
+
+.pm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle)
+}
+
+.pm-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase
+}
+
+.pm-info { flex: 1; min-width: 0 }
+
+.pm-info-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main)
+}
+
+.pm-info-detail {
+  font-size: 11px;
+  color: var(--text-hint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+/* Platform chips */
+.platform-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px
+}
+
+.platform-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-inp);
+  background: var(--bg-subtle);
+  font-size: 12px;
+  color: var(--text-main)
+}
+
+.platform-chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--danger-color);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  opacity: .7
+}
+
+.platform-chip-remove:hover { opacity: 1 }
+
+/* Danger zone */
+.danger-zone {
+  background: var(--red-bg);
+  border: 1px solid var(--red-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap
+}
+
+.danger-zone-text { flex: 1; min-width: 0 }
+
+.danger-zone-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red)
+}
+
+.danger-zone-desc {
+  font-size: 12px;
+  color: var(--text-hint);
+  margin-top: 2px
+}
+
+/* PM toggle pills in wallets */
+.pm-toggle {
+  border-radius: 999px !important
+}
+
+/* Field label above inputs */
+.field-label {
+  font-size: 11px;
+  color: var(--text-hint);
+  margin-bottom: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em
+}
+
+/* Fee list separator */
+.fee-add-sep {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 14px 0
+}
+
 /* SETTINGS */
 .settings-grid {
   display: grid;
@@ -1156,6 +1387,7 @@ input[type=radio] {
 
 .setting-label {
   font-size: 14px;
+  font-weight: 600;
   color: var(--text-main)
 }
 
@@ -1204,7 +1436,8 @@ input[type=radio] {
     grid-template-columns: 1fr
   }
 
-  .settings-grid {
+  .settings-grid,
+  .settings-two-col {
     grid-template-columns: 1fr
   }
 }
@@ -1427,6 +1660,7 @@ body.dark .badge-waiting {
   .grid-3 { grid-template-columns: 1fr 1fr }
 
   .settings-grid { grid-template-columns: 1fr }
+  .settings-two-col { grid-template-columns: 1fr }
 
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch }
 

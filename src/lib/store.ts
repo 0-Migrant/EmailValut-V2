@@ -111,6 +111,7 @@ const DEFAULT_SETTINGS: Settings = {
   platforms: ['WhatsApp', 'Instagram', 'Phone Call', 'Walk-in', 'Discord'],
   platformFees: [],
   wallets: [],
+  hideResourceAccounts: false,
 };
 
 // ─── Helper: add history entry ────────────────────────────────────────────────

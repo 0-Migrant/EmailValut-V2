@@ -209,7 +209,7 @@ export default function NewOrder() {
         </div>
 
         {/* Resource Accounts */}
-        {credentials.length > 0 && (
+        {credentials.length > 0 && !settings.hideResourceAccounts && (
           <div className="card">
             <div className="card-title">Resource Accounts</div>
             <p style={{ fontSize:12, color:'var(--text-hint)', marginBottom:10 }}>

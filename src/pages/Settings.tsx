@@ -5,15 +5,24 @@ import { fmt } from '@/lib/utils';
 import type { PlatformFee } from '@/lib/types';
 import Icon from '@/components/Icon';
 
+
 export default function Settings() {
   const settings = useVaultStore((s) => s.settings);
   const updateSettings = useVaultStore((s) => s.updateSettings);
+  const addWallet    = useVaultStore((s) => s.addWallet);
+  const removeWallet = useVaultStore((s) => s.removeWallet);
+  const updateWallet = useVaultStore((s) => s.updateWallet);
   const [pmLabel,       setPmLabel]      = useState('');
   const [pmDetail,      setPmDetail]     = useState('');
   const [newPlatform,   setNewPlatform]  = useState('');
   const [feePlatform,   setFeePlatform]  = useState('');
   const [feeType,       setFeeType]      = useState<'pct' | 'amount'>('pct');
   const [feeValue,      setFeeValue]     = useState('');
+  const [newWalletName,  setNewWalletName]  = useState('');
+  const [editingWallet,  setEditingWallet]  = useState<string | null>(null);
+  const [editWalletName, setEditWalletName] = useState('');
+
+  const wallets = settings.wallets ?? [];
   const nukeAll = useVaultStore((s) => s.nukeAll);
   const importData = useVaultStore((s) => s.importData);
   const state = useVaultStore((s) => s);
@@ -313,6 +322,108 @@ export default function Settings() {
               setFeePlatform(''); setFeeValue('');
             }}
           >Save Fee</button>
+        </div>
+      </div>
+
+      {/* ── Wallets ─────────────────────────────────────────────────────────── */}
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="card-title">Wallets</div>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+          Named income wallets. Assign payment methods to each wallet — completed orders using that method will automatically count toward that wallet's balance.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 }}>
+          {wallets.length === 0
+            ? <div style={{ fontSize: 13, color: 'var(--text-hint)' }}>No wallets configured. Add one below.</div>
+            : wallets.map((w) => {
+                const linkedMethods = w.paymentMethods ?? [];
+                const allPmLabels = (settings.paymentMethods ?? []).map((m) => m.label);
+                return (
+                  <div key={w.id} style={{ borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', overflow: 'hidden' }}>
+                    {/* Wallet name row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: linkedMethods.length > 0 || editingWallet === w.id ? '1px solid var(--border)' : 'none' }}>
+                      {editingWallet === w.id
+                        ? <>
+                            <input
+                              className="inp"
+                              style={{ flex: 1 }}
+                              value={editWalletName}
+                              onChange={(e) => setEditWalletName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && editWalletName.trim()) { updateWallet(w.id, { name: editWalletName.trim() }); setEditingWallet(null); }
+                                if (e.key === 'Escape') setEditingWallet(null);
+                              }}
+                              autoFocus
+                            />
+                            <button className="btn btn-primary btn-sm" onClick={() => { if (editWalletName.trim()) { updateWallet(w.id, { name: editWalletName.trim() }); setEditingWallet(null); } }}>Save</button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setEditingWallet(null)}>Cancel</button>
+                          </>
+                        : <>
+                            <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>{w.name}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>{linkedMethods.length} payment method{linkedMethods.length !== 1 ? 's' : ''}</span>
+                            <button className="btn btn-ghost btn-sm" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => { setEditingWallet(w.id); setEditWalletName(w.name); }}>
+                              <Icon name="edit" size={11} style={{ marginRight: 3 }} />Rename
+                            </button>
+                            <button className="btn btn-danger btn-sm" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removeWallet(w.id)}>×</button>
+                          </>
+                      }
+                    </div>
+                    {/* Payment methods assignment */}
+                    <div style={{ padding: '8px 12px' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-hint)', marginBottom: 6, fontWeight: 600 }}>PAYMENT METHODS → auto-track order revenue</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {allPmLabels.length === 0
+                          ? <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>No payment methods configured yet.</span>
+                          : allPmLabels.map((label) => {
+                              const active = linkedMethods.includes(label);
+                              // Check if this label is already claimed by another wallet
+                              const claimedBy = wallets.find((x) => x.id !== w.id && (x.paymentMethods ?? []).includes(label));
+                              return (
+                                <button
+                                  key={label}
+                                  className={`btn btn-sm ${active ? 'btn-primary' : 'btn-ghost'}`}
+                                  style={{ opacity: claimedBy ? 0.45 : 1, fontSize: 12 }}
+                                  title={claimedBy ? `Already assigned to "${claimedBy.name}"` : undefined}
+                                  onClick={() => {
+                                    if (claimedBy) return; // prevent double-assigning
+                                    const next = active
+                                      ? linkedMethods.filter((x) => x !== label)
+                                      : [...linkedMethods, label];
+                                    updateWallet(w.id, { paymentMethods: next });
+                                  }}
+                                >
+                                  {label}{active ? ' ✓' : ''}
+                                </button>
+                              );
+                            })
+                        }
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+          }
+        </div>
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            className="inp"
+            style={{ flex: 1 }}
+            placeholder="Wallet name (e.g. PayPal, Website, Reserve)..."
+            value={newWalletName}
+            onChange={(e) => setNewWalletName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newWalletName.trim()) { addWallet({ name: newWalletName.trim(), paymentMethods: [] }); setNewWalletName(''); }
+            }}
+          />
+          <button
+            className="btn btn-ghost"
+            onClick={() => {
+              if (!newWalletName.trim()) return;
+              addWallet({ name: newWalletName.trim(), paymentMethods: [] });
+              setNewWalletName('');
+            }}
+          >Add Wallet</button>
         </div>
       </div>
     </>

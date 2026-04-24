@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
-import { fmt, orderTotal, statusLabel } from '@/lib/utils';
+import { fmt, orderTotal, statusLabel, toDateInputValue, inDateRange } from '@/lib/utils';
 import Icon from '@/components/Icon';
 
 export default function Analytics() {
@@ -10,6 +10,9 @@ export default function Analytics() {
   const platforms = settings.platforms ?? [];
 
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [dateFrom,   setDateFrom]   = useState('');
+  const [dateTo,     setDateTo]     = useState('');
+  const [datePreset, setDatePreset] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   function togglePlatform(p: string) {
     setSelectedPlatforms((prev) =>
@@ -17,9 +20,26 @@ export default function Analytics() {
     );
   }
 
-  const visibleOrders = selectedPlatforms.length === 0
-    ? orders
-    : orders.filter((o) => selectedPlatforms.includes(o.source));
+  function applyPreset(preset: 'all' | 'today' | 'week' | 'month') {
+    setDatePreset(preset);
+    const now = new Date();
+    if (preset === 'all') { setDateFrom(''); setDateTo(''); return; }
+    if (preset === 'today') {
+      const t = toDateInputValue(now); setDateFrom(t); setDateTo(t);
+    } else if (preset === 'week') {
+      const start = new Date(now); start.setDate(now.getDate() - now.getDay() + 1); start.setHours(0, 0, 0, 0);
+      setDateFrom(toDateInputValue(start)); setDateTo(toDateInputValue(now));
+    } else if (preset === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      setDateFrom(toDateInputValue(start)); setDateTo(toDateInputValue(now));
+    }
+  }
+
+  const visibleOrders = (() => {
+    let list = selectedPlatforms.length === 0 ? orders : orders.filter((o) => selectedPlatforms.includes(o.source));
+    if (dateFrom || dateTo) list = list.filter((o) => inDateRange(o.createdAt, dateFrom, dateTo));
+    return list;
+  })();
 
   const done  = visibleOrders.filter((o) => o.status === 'done');
   const now   = new Date();
@@ -81,6 +101,38 @@ export default function Analytics() {
               {p}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Date range filter */}
+      <div className="card" style={{ marginBottom:16, padding:'12px 16px' }}>
+        <div style={{ fontSize:12, color:'var(--text-hint)', marginBottom:8, fontWeight:600 }}>Filter by Date</div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center' }}>
+          {(['all', 'today', 'week', 'month'] as const).map((p) => (
+            <button
+              key={p}
+              className={`btn btn-sm ${datePreset === p ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => applyPreset(p)}
+            >
+              {p === 'all' ? 'All Time' : p === 'today' ? 'Today' : p === 'week' ? 'This Week' : 'This Month'}
+            </button>
+          ))}
+          <span style={{ fontSize:12, color:'var(--text-hint)' }}>or custom:</span>
+          <input
+            type="date"
+            className="inp inp-sm"
+            style={{ width:140 }}
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setDatePreset('all'); }}
+          />
+          <span style={{ fontSize:12, color:'var(--text-hint)' }}>to</span>
+          <input
+            type="date"
+            className="inp inp-sm"
+            style={{ width:140 }}
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setDatePreset('all'); }}
+          />
         </div>
       </div>
 

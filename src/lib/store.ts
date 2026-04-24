@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
   Item, DeliveryMan, Order, OrderStatus,
-  Credential, Stock, HistoryEntry, Settings, Bundle, PayoutEntry,
+  Credential, Stock, HistoryEntry, Settings, Bundle, PayoutEntry, Wallet,
 } from './types';
 import { uid } from './utils';
 import { supabase, isSupabaseEnabled } from './supabase';
@@ -76,6 +76,11 @@ interface AppActions {
   // Settings
   updateSettings: (data: Partial<Settings>) => void;
 
+  // Wallets
+  addWallet: (data: Omit<Wallet, 'id'>) => void;
+  removeWallet: (id: string) => void;
+  updateWallet: (id: string, patch: Partial<Omit<Wallet, 'id'>>) => void;
+
   // Data management
   nukeAll: () => void;
   importData: (data: Partial<AppState>) => void;
@@ -105,6 +110,7 @@ const DEFAULT_SETTINGS: Settings = {
   ],
   platforms: ['WhatsApp', 'Instagram', 'Phone Call', 'Walk-in', 'Discord'],
   platformFees: [],
+  wallets: [],
 };
 
 // ─── Helper: add history entry ────────────────────────────────────────────────
@@ -376,7 +382,30 @@ export const useVaultStore = create<VaultStore>()(
         set((s) => ({ payouts: s.payouts.filter((p) => p.id !== id) }));
       },
       restorePayoutToPending(id) {
-        set((s) => ({ payouts: s.payouts.map((p) => p.id === id ? { ...p, status: 'pending' as const } : p) }));
+        set((s) => {
+          const entry = s.payouts.find((p) => p.id === id);
+          if (!entry) return s;
+          // Find an existing pending entry for the same worker/wallet/note to merge into
+          const sibling = s.payouts.find(
+            (p) =>
+              p.id !== id &&
+              p.workerId === entry.workerId &&
+              p.walletId === entry.walletId &&
+              p.note === entry.note &&
+              p.type === 'debit' &&
+              p.status === 'pending',
+          );
+          if (sibling) {
+            // Merge: add amount back to the sibling pending entry and remove the paid entry
+            return {
+              payouts: s.payouts
+                .filter((p) => p.id !== id)
+                .map((p) => p.id === sibling.id ? { ...p, amount: p.amount + entry.amount } : p),
+            };
+          }
+          // No sibling — just flip status back to pending
+          return { payouts: s.payouts.map((p) => p.id === id ? { ...p, status: 'pending' as const } : p) };
+        });
       },
 
       // ── Credentials ───────────────────────────────────────────────────────
@@ -529,6 +558,32 @@ export const useVaultStore = create<VaultStore>()(
       // ── Settings ──────────────────────────────────────────────────────────
       updateSettings(data) {
         set((s) => ({ settings: { ...s.settings, ...data } }));
+      },
+
+      // ── Wallets ───────────────────────────────────────────────────────────
+      addWallet(data) {
+        set((s) => ({
+          settings: {
+            ...s.settings,
+            wallets: [...(s.settings.wallets ?? []), { id: uid(), ...data }],
+          },
+        }));
+      },
+      removeWallet(id) {
+        set((s) => ({
+          settings: {
+            ...s.settings,
+            wallets: (s.settings.wallets ?? []).filter((w) => w.id !== id),
+          },
+        }));
+      },
+      updateWallet(id, patch) {
+        set((s) => ({
+          settings: {
+            ...s.settings,
+            wallets: (s.settings.wallets ?? []).map((w) => w.id === id ? { ...w, ...patch } : w),
+          },
+        }));
       },
 
       // ── Data management ───────────────────────────────────────────────────

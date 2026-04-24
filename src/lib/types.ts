@@ -86,9 +86,16 @@ export interface PlatformFee {
   value: number;
 }
 
+export interface Wallet {
+  id: string;
+  name: string;
+  paymentMethods: string[]; // payment method labels whose order revenue flows into this wallet
+}
+
 export interface PayoutEntry {
   id: string;
   workerId: string;
+  walletId?: string; // which wallet a distribution came from
   amount: number;
   type: 'debit' | 'credit';
   status?: 'pending' | 'paid'; // only relevant for worker debit entries
@@ -106,6 +113,7 @@ export interface Settings {
   paymentMethods: PaymentMethod[];
   platforms: string[];
   platformFees: PlatformFee[];
+  wallets: Wallet[];
 }
 
 export interface BundleItem {

@@ -20,13 +20,15 @@ export default function Orders() {
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
   const items       = useVaultStore((s) => s.items);
   const settings    = useVaultStore((s) => s.settings);
-  const setStatus   = useVaultStore((s) => s.setOrderStatus);
-  const delOrder    = useVaultStore((s) => s.deleteOrder);
+  const setStatus     = useVaultStore((s) => s.setOrderStatus);
+  const delOrder      = useVaultStore((s) => s.deleteOrder);
+  const updateOrder   = useVaultStore((s) => s.updateOrder);
   const { showConfirm, openOrderDetail } = useModal();
 
-  const [search, setSearch]     = useState('');
-  const [filter, setFilter]     = useState('all');
-  const [dmFilter, setDmFilter] = useState('');
+  const [search, setSearch]         = useState('');
+  const [filter, setFilter]         = useState('all');
+  const [dmFilter, setDmFilter]     = useState('');
+  const [editingPm, setEditingPm]   = useState<string | null>(null); // orderId being edited
 
   const filtered = orders.filter((o) => {
     const dm = deliveryMen.find((d) => d.id === o.deliveryManId);
@@ -74,7 +76,7 @@ export default function Orders() {
                 <thead>
                   <tr>
                     <th>#</th><th>Customer</th><th>Worker</th>
-                    <th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th>
+                    <th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th><th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -96,6 +98,37 @@ export default function Orders() {
                           <div style={{ fontWeight:700, color:'var(--accent)' }}>{fmt(orderTotal(o))} $ USD</div>
                           {info.type === 'discount'  && <span className="discount-badge">🏷 -{info.pct}%</span>}
                           {info.type === 'surcharge' && <span className="discount-badge" style={{ background:'var(--orange-bg)', color:'var(--orange)', borderColor:'var(--orange-border)' }}>📈 +{info.pct}%</span>}
+                        </td>
+                        <td>
+                          {editingPm === o.id
+                            ? (
+                              <select
+                                className="inp inp-sm"
+                                autoFocus
+                                value={o.paymentMethod}
+                                onChange={(e) => {
+                                  const pm = (settings.paymentMethods ?? []).find((m) => m.label === e.target.value);
+                                  updateOrder(o.id, { paymentMethod: pm?.label ?? e.target.value, paymentDetail: pm?.detail ?? '' });
+                                  setEditingPm(null);
+                                }}
+                                onBlur={() => setEditingPm(null)}
+                              >
+                                {(settings.paymentMethods ?? []).map((m) => (
+                                  <option key={m.id} value={m.label}>{m.label}</option>
+                                ))}
+                              </select>
+                            )
+                            : (
+                              <button
+                                className="btn btn-ghost btn-xs"
+                                style={{ fontSize: 12 }}
+                                onClick={() => setEditingPm(o.id)}
+                                title="Click to change payment method"
+                              >
+                                {o.paymentMethod || '—'} <Icon name="edit" size={10} style={{ marginLeft: 3, opacity: 0.5 }} />
+                              </button>
+                            )
+                          }
                         </td>
                         <td><span className={`badge ${statusBadgeClass(o.status)}`}>{statusLabel(o.status)}</span></td>
                         <td><span className="tag">{fmtDateTime(o.createdAt)}</span></td>

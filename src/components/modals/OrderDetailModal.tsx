@@ -14,10 +14,12 @@ export default function OrderDetailModal() {
   const setStatus     = useVaultStore((s) => s.setOrderStatus);
   const updateOrder   = useVaultStore((s) => s.updateOrder);
   const settings      = useVaultStore((s) => s.settings);
-  const [showUnitPrice,  setShowUnitPrice]  = useState(false);
-  const [showDiscount,   setShowDiscount]   = useState(true);
-  const [editingSource,  setEditingSource]  = useState(false);
-  const [pdfTemplate,    setPdfTemplate]    = useState<'standard' | 'golden' | 'vip'>('standard');
+  const clients         = useVaultStore((s) => s.clients);
+  const [showUnitPrice,   setShowUnitPrice]   = useState(false);
+  const [showDiscount,    setShowDiscount]    = useState(true);
+  const [editingSource,   setEditingSource]   = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(false);
+  const [pdfTemplate,     setPdfTemplate]     = useState<'standard' | 'golden' | 'vip'>('standard');
   const [vipImage,       setVipImage]       = useState<string | null>(null);
 
   function handleVipImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -64,8 +66,25 @@ export default function OrderDetailModal() {
             <div style={{ fontWeight: 600 }}>{dm?.name ?? 'Unknown'}</div>
           </div>
           <div>
-            <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Customer ID</div>
-            <div style={{ fontWeight: 600 }}>{order.customerId || '—'}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Customer</div>
+            {editingCustomer ? (
+              <select
+                className="inp"
+                defaultValue={order.customerId}
+                autoFocus
+                style={{ padding: '2px 6px', fontSize: 13 }}
+                onChange={(e) => { updateOrder(order.id, { customerId: e.target.value }); setEditingCustomer(false); }}
+                onBlur={() => setEditingCustomer(false)}
+              >
+                <option value="">— None —</option>
+                {clients.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+            ) : (
+              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {order.customerId || '—'}
+                <button className="btn btn-ghost btn-xs" onClick={() => setEditingCustomer(true)} title="Edit customer"><Icon name="edit" size={11} /></button>
+              </div>
+            )}
           </div>
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Payment Method</div>

@@ -68,21 +68,43 @@ export default function OrderDetailModal() {
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Customer</div>
             {editingCustomer ? (
-              <select
-                className="inp"
-                defaultValue={order.customerId}
-                autoFocus
-                style={{ padding: '2px 6px', fontSize: 13 }}
-                onChange={(e) => { updateOrder(order.id, { customerId: e.target.value }); setEditingCustomer(false); }}
-                onBlur={() => setEditingCustomer(false)}
-              >
-                <option value="">— None —</option>
-                {clients.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  className="inp"
+                  list="customer-list"
+                  defaultValue={order.customerId}
+                  autoFocus
+                  placeholder="Type or pick customer..."
+                  style={{ padding: '2px 6px', fontSize: 13 }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { updateOrder(order.id, { customerId: (e.target as HTMLInputElement).value.trim() }); setEditingCustomer(false); }
+                    if (e.key === 'Escape') setEditingCustomer(false);
+                  }}
+                />
+                <datalist id="customer-list">
+                  {clients.map((c) => <option key={c.id} value={c.name} />)}
+                </datalist>
+                <button className="btn btn-ghost btn-xs" onClick={(e) => {
+                  const inp = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                  const val = inp?.value.trim();
+                  if (val !== undefined) updateOrder(order.id, { customerId: val });
+                  setEditingCustomer(false);
+                }}><Icon name="check" size={11} /></button>
+                <button className="btn btn-ghost btn-xs" onClick={() => setEditingCustomer(false)}><Icon name="x" size={11} /></button>
+              </div>
             ) : (
               <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {order.customerId || '—'}
-                <button className="btn btn-ghost btn-xs" onClick={() => setEditingCustomer(true)} title="Edit customer"><Icon name="edit" size={11} /></button>
+                <button
+                  className="btn btn-ghost btn-xs"
+                  title="Edit customer (requires password)"
+                  onClick={() => {
+                    const pass = window.prompt('🔐 Enter admin password to change customer:');
+                    if (pass === null) return;
+                    if (pass !== 'arerede2000.') { alert('❌ Incorrect password.'); return; }
+                    setEditingCustomer(true);
+                  }}
+                ><Icon name="edit" size={11} /></button>
               </div>
             )}
           </div>

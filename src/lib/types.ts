@@ -1,5 +1,12 @@
 // ─── Core entities ────────────────────────────────────────────────────────────
 
+export interface Client {
+  id: string;
+  name: string;
+  note?: string;
+  createdAt: string;
+}
+
 export interface Item {
   id: string;
   name: string;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Icon from '@/components/Icon';
 import { useNavigate } from 'react-router-dom';
 import { useVaultStore } from '@/lib/store';
@@ -14,8 +14,10 @@ export default function NewOrder() {
   const orders        = useVaultStore((s) => s.orders);
   const bundles       = useVaultStore((s) => s.bundles);
   const credentials   = useVaultStore((s) => s.credentials);
+  const clients       = useVaultStore((s) => s.clients);
   const addOrder      = useVaultStore((s) => s.addOrder);
   const consumeStock  = useVaultStore((s) => s.consumeStock);
+  const ensureClient  = useVaultStore((s) => s.ensureClient);
   const settings      = useVaultStore((s) => s.settings);
 
   const [dmId,           setDmId]           = useState('');
@@ -25,6 +27,27 @@ export default function NewOrder() {
   const [discountPctStr, setDiscountPctStr] = useState('');
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [source,          setSource]          = useState('');
+
+  // Customer ID autocomplete
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const customerRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = customerId.trim()
+    ? clients
+        .filter((c) => c.name.toLowerCase().startsWith(customerId.trim().toLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .slice(0, 10)
+    : [];
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (customerRef.current && !customerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
 
   // Selected credential IDs for resource accounts
   const [selectedCredIds, setSelectedCredIds] = useState<Set<string>>(new Set());
@@ -151,6 +174,7 @@ export default function NewOrder() {
     });
 
     if (customerId) {
+      ensureClient(customerId);
       const newCount = prevCount + 1;
       if (isLoyaltyMilestone(newCount)) {
         showLoyalty(customerId, newCount);
@@ -186,7 +210,40 @@ export default function NewOrder() {
             </div>
             <div className="field">
               <label>Customer ID <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional — loyalty tracking)</span></label>
-              <input className="inp" value={customerId} onChange={(e) => setCustomerId(e.target.value)} placeholder="e.g. CUST-001" />
+              <div ref={customerRef} style={{ position: 'relative' }}>
+                <input
+                  className="inp"
+                  value={customerId}
+                  onChange={(e) => { setCustomerId(e.target.value); setShowSuggestions(true); }}
+                  onFocus={() => setShowSuggestions(true)}
+                  placeholder="Type to search clients..."
+                  autoComplete="off"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    maxHeight: 220, overflowY: 'auto', marginTop: 2,
+                  }}>
+                    {suggestions.map((c) => (
+                      <div
+                        key={c.id}
+                        onMouseDown={(e) => { e.preventDefault(); setCustomerId(c.name); setShowSuggestions(false); }}
+                        style={{
+                          padding: '8px 12px', cursor: 'pointer', fontSize: 13,
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-alt, var(--border))')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <span style={{ fontWeight: 600 }}>{c.name}</span>
+                        {c.note && <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>{c.note}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="field">
               <label>Payment Method <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>

@@ -23,6 +23,7 @@ import History from './pages/History';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import Earnings from './pages/Earnings';
+import Clients from './pages/Clients';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -80,6 +81,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/new-order" element={<NewOrder />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/clients" element={<Clients />} />
           <Route path="/items" element={<Items />} />
           <Route path="/bundles" element={<Bundles />} />
           <Route path="/delivery" element={<Delivery />} />

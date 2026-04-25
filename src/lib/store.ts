@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
   Item, DeliveryMan, Order, OrderStatus,
-  Credential, Stock, HistoryEntry, Settings, Bundle, PayoutEntry, Wallet,
+  Credential, Stock, HistoryEntry, Settings, Bundle, PayoutEntry, Wallet, Client,
 } from './types';
 import { uid } from './utils';
 import { supabase, isSupabaseEnabled } from './supabase';
@@ -19,6 +19,7 @@ interface AppState {
   history: HistoryEntry[];
   settings: Settings;
   payouts: PayoutEntry[];
+  clients: Client[];
 }
 
 // ─── Actions shape ────────────────────────────────────────────────────────────
@@ -38,6 +39,12 @@ interface AppActions {
   addBundle: (data: Omit<Bundle, 'id'>) => void;
   updateBundle: (id: string, data: Partial<Omit<Bundle, 'id'>>) => void;
   deleteBundle: (id: string) => void;
+
+  // Clients
+  addClient: (data: Omit<Client, 'id' | 'createdAt'>) => void;
+  updateClient: (id: string, data: Partial<Omit<Client, 'id' | 'createdAt'>>) => void;
+  deleteClient: (id: string) => void;
+  ensureClient: (name: string) => void;
 
   // Delivery Men
   addDeliveryMan: (data: Omit<DeliveryMan, 'id'>) => void;
@@ -223,6 +230,7 @@ export const useVaultStore = create<VaultStore>()(
       history:      [],
       settings:     DEFAULT_SETTINGS,
       payouts:      [],
+      clients:      [],
 
       // ── Items ──────────────────────────────────────────────────────────────
       addItem(data) {
@@ -282,6 +290,31 @@ export const useVaultStore = create<VaultStore>()(
             ),
             history: pushHistory(s, 'del', `Deleted category: ${name}`),
           };
+        });
+      },
+
+      // ── Clients ───────────────────────────────────────────────────────────
+      addClient(data) {
+        set((s) => {
+          const client: Client = { id: uid(), createdAt: new Date().toISOString(), ...data };
+          return { clients: [...s.clients, client] };
+        });
+      },
+      updateClient(id, data) {
+        set((s) => ({
+          clients: s.clients.map((c) => (c.id === id ? { ...c, ...data } : c)),
+        }));
+      },
+      deleteClient(id) {
+        set((s) => ({ clients: s.clients.filter((c) => c.id !== id) }));
+      },
+      ensureClient(name) {
+        if (!name.trim()) return;
+        set((s) => {
+          const exists = s.clients.some((c) => c.name.toLowerCase() === name.trim().toLowerCase());
+          if (exists) return s;
+          const client: Client = { id: uid(), name: name.trim(), createdAt: new Date().toISOString() };
+          return { clients: [...s.clients, client] };
         });
       },
 
@@ -598,6 +631,7 @@ export const useVaultStore = create<VaultStore>()(
           bundles: [],
           history: [],
           payouts: [],
+          clients: [],
         });
       },
       importData(data) {
@@ -628,6 +662,9 @@ export const useVaultStore = create<VaultStore>()(
           payouts: data.payouts
             ? [...s.payouts, ...data.payouts.filter((x) => !s.payouts.find((p) => p.id === x.id))]
             : s.payouts,
+          clients: data.clients
+            ? [...s.clients, ...data.clients.filter((x) => !s.clients.find((c) => c.id === x.id))]
+            : s.clients,
           history: pushHistory(s, 'add', 'Imported data from JSON backup'),
         }));
       },

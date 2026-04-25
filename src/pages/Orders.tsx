@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
-import { fmt, fmtDateTime, orderTotal, getPriceInfo, statusBadgeClass, statusLabel } from '@/lib/utils';
+import { fmt, fmtDateTime, orderTotal, getPriceInfo, statusBadgeClass, statusLabel, getLoyaltyTier } from '@/lib/utils';
 import type { OrderStatus } from '@/lib/types';
 import Icon from '@/components/Icon';
 
@@ -99,10 +99,22 @@ export default function Orders() {
                   {filtered.map((o) => {
                     const dm   = deliveryMen.find((d) => d.id === o.deliveryManId);
                     const info = getPriceInfo(o);
+                    const clientOrderCount = o.customerId
+                      ? orders.filter((x) => x.customerId === o.customerId).length
+                      : 0;
+                    const tier = o.customerId ? getLoyaltyTier(clientOrderCount) : null;
                     return (
                       <tr key={o.id}>
                         <td><span className="tag">{o.id.slice(-5)}</span></td>
-                        <td style={{ fontSize:12, color:'var(--text-muted)' }}>{o.customerId || '—'}</td>
+                        <td style={{ fontSize:12 }}>
+                          {o.customerId
+                            ? <span style={{ display:'flex', alignItems:'center', gap:5 }}>
+                                <span title={`${tier!.label} — ${clientOrderCount} orders`}>{tier!.emoji}</span>
+                                <span style={{ color:'var(--text-muted)' }}>{o.customerId}</span>
+                              </span>
+                            : <span style={{ color:'var(--text-hint)' }}>—</span>
+                          }
+                        </td>
                         <td style={{ fontWeight:500 }}>{dm?.name ?? 'Unknown'}</td>
                         <td style={{ color:'var(--text-muted)', maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                           {o.items.map((oi) => items.find((i) => i.id === oi.itemId)?.name ?? '?').join(', ')}

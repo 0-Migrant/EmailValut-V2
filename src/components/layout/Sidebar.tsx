@@ -7,6 +7,7 @@ const NAV: { href: string; label: string; icon: IconName; section: string }[] = 
   { href: '/orders',      label: 'Manage Orders',  icon: 'orders',       section: 'Orders' },
   { href: '/analytics',   label: 'Analytics',      icon: 'analytics',    section: 'Orders' },
   { href: '/earnings',    label: 'Earnings',       icon: 'earnings',     section: 'Orders' },
+  { href: '/clients',     label: 'Clients',        icon: 'clients',      section: 'Management' },
   { href: '/items',       label: 'Items',          icon: 'items',        section: 'Management' },
   { href: '/bundles',     label: 'Bundles',        icon: 'bundles',      section: 'Management' },
   { href: '/delivery',    label: 'Workers',        icon: 'workers',      section: 'Management' },

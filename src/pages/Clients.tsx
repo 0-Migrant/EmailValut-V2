@@ -151,7 +151,7 @@ export default function Clients() {
 
   // Build enriched list
   const enriched = clients.map((c) => {
-    const clientOrders = orders.filter((o) => o.customerId === c.name);
+    const clientOrders = orders.filter((o) => o.customerId?.trim().toLowerCase() === c.name.trim().toLowerCase());
     const lastOrder    = clientOrders[0];
     return {
       ...c,

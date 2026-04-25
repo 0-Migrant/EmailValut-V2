@@ -199,7 +199,7 @@ export default function Clients() {
     }
   }
 
-  const tierLabels = ['all', 'special', ...LOYALTY_TIERS.map((t) => t.label).reverse()];
+  const tierLabels = ['all', 'special', ...LOYALTY_TIERS.map((t) => t.label)];
 
   return (
     <>

@@ -18,7 +18,8 @@ export default function OrderDetailModal() {
   const [showUnitPrice,   setShowUnitPrice]   = useState(false);
   const [showDiscount,    setShowDiscount]    = useState(true);
   const [editingSource,   setEditingSource]   = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(false);
+  const [editingCustomer,  setEditingCustomer]  = useState(false);
+  const [customerDraft,    setCustomerDraft]    = useState('');
   const [pdfTemplate,     setPdfTemplate]     = useState<'standard' | 'golden' | 'vip'>('standard');
   const [vipImage,       setVipImage]       = useState<string | null>(null);
 
@@ -72,24 +73,20 @@ export default function OrderDetailModal() {
                 <input
                   className="inp"
                   list="customer-list"
-                  defaultValue={order.customerId}
+                  value={customerDraft}
                   autoFocus
                   placeholder="Type or pick customer..."
                   style={{ padding: '2px 6px', fontSize: 13 }}
+                  onChange={(e) => setCustomerDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') { updateOrder(order.id, { customerId: (e.target as HTMLInputElement).value.trim() }); setEditingCustomer(false); }
+                    if (e.key === 'Enter') { updateOrder(order.id, { customerId: customerDraft.trim() }); setEditingCustomer(false); }
                     if (e.key === 'Escape') setEditingCustomer(false);
                   }}
                 />
                 <datalist id="customer-list">
                   {clients.map((c) => <option key={c.id} value={c.name} />)}
                 </datalist>
-                <button className="btn btn-ghost btn-xs" onClick={(e) => {
-                  const inp = (e.currentTarget.previousElementSibling as HTMLInputElement);
-                  const val = inp?.value.trim();
-                  if (val !== undefined) updateOrder(order.id, { customerId: val });
-                  setEditingCustomer(false);
-                }}><Icon name="check" size={11} /></button>
+                <button className="btn btn-ghost btn-xs" onClick={() => { updateOrder(order.id, { customerId: customerDraft.trim() }); setEditingCustomer(false); }}><Icon name="check" size={11} /></button>
                 <button className="btn btn-ghost btn-xs" onClick={() => setEditingCustomer(false)}><Icon name="x" size={11} /></button>
               </div>
             ) : (
@@ -102,6 +99,7 @@ export default function OrderDetailModal() {
                     const pass = window.prompt('🔐 Enter admin password to change customer:');
                     if (pass === null) return;
                     if (pass !== 'arerede2000.') { alert('❌ Incorrect password.'); return; }
+                    setCustomerDraft(order.customerId ?? '');
                     setEditingCustomer(true);
                   }}
                 ><Icon name="edit" size={11} /></button>

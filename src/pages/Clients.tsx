@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { getLoyaltyTier, LOYALTY_TIERS } from '@/lib/utils';
@@ -91,12 +91,13 @@ function ClientFormPopup({ editId, initialName, initialNote, initialSpecial, onS
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Clients() {
-  const clients      = useVaultStore((s) => s.clients);
-  const orders       = useVaultStore((s) => s.orders);
-  const addClient    = useVaultStore((s) => s.addClient);
-  const updateClient = useVaultStore((s) => s.updateClient);
-  const deleteClient = useVaultStore((s) => s.deleteClient);
-  const settings     = useVaultStore((s) => s.settings);
+  const clients                  = useVaultStore((s) => s.clients);
+  const orders                   = useVaultStore((s) => s.orders);
+  const addClient                = useVaultStore((s) => s.addClient);
+  const updateClient             = useVaultStore((s) => s.updateClient);
+  const deleteClient             = useVaultStore((s) => s.deleteClient);
+  const syncClientsFromDoneOrders = useVaultStore((s) => s.syncClientsFromDoneOrders);
+  const settings                 = useVaultStore((s) => s.settings);
   const { showConfirm } = useModal();
 
   const [popupOpen,   setPopupOpen]   = useState(false);
@@ -106,6 +107,12 @@ export default function Clients() {
   const [editSpecial, setEditSpecial] = useState(false);
   const [search,      setSearch]      = useState('');
   const [tierFilter,  setTierFilter]  = useState<string>('all');
+  const [syncMsg,     setSyncMsg]     = useState('');
+
+  // Auto-sync on first mount
+  useEffect(() => {
+    syncClientsFromDoneOrders();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openAdd() {
     setEditId(null); setEditName(''); setEditNote(''); setEditSpecial(false);
@@ -162,12 +169,35 @@ export default function Clients() {
     return matchQ && matchT;
   });
 
-  // Sort: special first, then by order count desc
+  // Tier order index for sorting (0 = highest)
+  const TIER_ORDER = ['VIP', 'Gold', 'Silver', 'Regular', 'New'];
+
   const sorted = [...filtered].sort((a, b) => {
+    // Special first
     if (a.isSpecial && !b.isSpecial) return -1;
     if (!a.isSpecial && b.isSpecial) return 1;
+    // Then by tier rank (highest first)
+    const ta = TIER_ORDER.indexOf(a.tier.label);
+    const tb = TIER_ORDER.indexOf(b.tier.label);
+    if (ta !== tb) return ta - tb;
+    // Within same tier: more orders first
     return b.orderCount - a.orderCount;
   });
+
+  // Group into sections for the list view
+  type Group = { key: string; label: string; emoji: string; color: string; bg: string; items: typeof sorted };
+  const groups: Group[] = [];
+
+  const specials = sorted.filter((c) => c.isSpecial);
+  if (specials.length) {
+    groups.push({ key: 'special', label: 'Special', emoji: '⭐', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', items: specials });
+  }
+  for (const tier of LOYALTY_TIERS) {
+    const members = sorted.filter((c) => !c.isSpecial && c.tier.label === tier.label);
+    if (members.length) {
+      groups.push({ key: tier.label, label: tier.label, emoji: tier.emoji, color: tier.color, bg: tier.bg, items: members });
+    }
+  }
 
   const tierLabels = ['all', 'special', ...LOYALTY_TIERS.map((t) => t.label).reverse()];
 
@@ -190,13 +220,25 @@ export default function Clients() {
         <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 400, color: 'var(--text-hint)' }}>
           ({clients.length})
         </span>
-        <button
-          className="btn btn-primary btn-sm"
-          style={{ marginLeft: 'auto' }}
-          onClick={openAdd}
-        >
-          + Add Client
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {syncMsg && (
+            <span style={{ fontSize: 12, color: 'var(--green, #22c55e)' }}>{syncMsg}</span>
+          )}
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              const n = syncClientsFromDoneOrders();
+              setSyncMsg(n > 0 ? `+${n} client${n > 1 ? 's' : ''} added` : 'Already up to date');
+              setTimeout(() => setSyncMsg(''), 3000);
+            }}
+            title="Import any missing customers from done orders"
+          >
+            ↻ Sync from Orders
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={openAdd}>
+            + Add Client
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -251,74 +293,90 @@ export default function Clients() {
         ))}
       </div>
 
-      {/* Client cards */}
+      {/* Client list */}
       {!sorted.length ? (
         <div className="empty-state">
           <div className="empty-icon"><Icon name="clients" size={32} /></div>
           {search || tierFilter !== 'all' ? 'No clients match.' : 'No clients yet. Add one above.'}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-          {sorted.map((c) => (
-            <div
-              key={c.id}
-              style={{
-                borderRadius: 10,
-                border: `1.5px solid ${c.isSpecial ? '#f59e0b' : c.tier.color}`,
-                background: c.isSpecial ? 'rgba(245,158,11,0.07)' : c.tier.bg,
-                padding: '14px 16px',
-                display: 'flex', flexDirection: 'column', gap: 8,
-                position: 'relative',
-              }}
-            >
-              {/* Header row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{
-                  padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                  background: c.isSpecial ? '#f59e0b' : c.tier.color,
-                  color: '#fff', whiteSpace: 'nowrap', flexShrink: 0,
-                }}>
-                  {c.tier.emoji} {c.tier.label}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {groups.map((group) => (
+            <div key={group.key}>
+              {/* Section header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 12px', borderRadius: 8, marginBottom: 8,
+                background: group.bg, border: `1px solid ${group.color}`,
+                fontWeight: 700, fontSize: 13, color: group.color,
+              }}>
+                {group.emoji} {group.label}
+                <span style={{ marginLeft: 4, fontWeight: 400, fontSize: 12, opacity: 0.75 }}>
+                  — {group.items.length} client{group.items.length !== 1 ? 's' : ''}
                 </span>
-                {c.isSpecial && (
-                  <span style={{
-                    padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                    background: 'rgba(245,158,11,0.18)', color: '#f59e0b',
-                    border: '1px solid #f59e0b', whiteSpace: 'nowrap',
-                  }}>
-                    ⭐ Special
-                  </span>
-                )}
-                <div className="action-group" style={{ marginLeft: 'auto' }}>
-                  <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c.id)}>
-                    <Icon name="edit" size={11} />
-                  </button>
-                  <button className="btn btn-danger btn-xs" onClick={() => handleDelete(c.id)}>
-                    <Icon name="trash" size={11} />
-                  </button>
-                </div>
               </div>
 
-              {/* Name */}
-              <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)', letterSpacing: 0.2 }}>
-                {c.name}
-              </div>
+              {/* Rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {group.items.map((c) => (
+                  <div
+                    key={c.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 8,
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderLeft: `4px solid ${c.isSpecial ? '#f59e0b' : c.tier.color}`,
+                    }}
+                  >
+                    {/* Name + note */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {c.name}
+                        {c.isSpecial && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
+                            background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid #f59e0b',
+                          }}>⭐ Special</span>
+                        )}
+                      </div>
+                      {c.note && (
+                        <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2, fontStyle: 'italic' }}>
+                          {c.note}
+                        </div>
+                      )}
+                    </div>
 
-              {/* Note */}
-              {c.note && (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                  {c.note}
-                </div>
-              )}
+                    {/* Orders count */}
+                    <div style={{ textAlign: 'center', minWidth: 52 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: c.isSpecial ? '#f59e0b' : c.tier.color }}>
+                        {c.orderCount}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-hint)' }}>orders</div>
+                    </div>
 
-              {/* Stats */}
-              <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                <span>
-                  <strong style={{ color: c.tier.color }}>{c.orderCount}</strong> orders
-                </span>
-                {c.lastDate && (
-                  <span>Last: {c.lastDate}</span>
-                )}
+                    {/* Last order */}
+                    <div style={{ textAlign: 'right', minWidth: 72 }}>
+                      {c.lastDate
+                        ? <>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.lastDate}</div>
+                            <div style={{ fontSize: 10, color: 'var(--text-hint)' }}>last order</div>
+                          </>
+                        : <div style={{ fontSize: 11, color: 'var(--text-hint)' }}>—</div>
+                      }
+                    </div>
+
+                    {/* Actions */}
+                    <div className="action-group">
+                      <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c.id)}>
+                        <Icon name="edit" size={11} />
+                      </button>
+                      <button className="btn btn-danger btn-xs" onClick={() => handleDelete(c.id)}>
+                        <Icon name="trash" size={11} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}

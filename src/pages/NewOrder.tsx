@@ -221,9 +221,10 @@ export default function NewOrder() {
                 />
                 {showSuggestions && suggestions.length > 0 && (
                   <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-                    background: 'var(--surface)', border: '1px solid var(--border)',
-                    borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
                     maxHeight: 220, overflowY: 'auto', marginTop: 2,
                   }}>
                     {suggestions.map((c) => (
@@ -231,11 +232,12 @@ export default function NewOrder() {
                         key={c.id}
                         onMouseDown={(e) => { e.preventDefault(); setCustomerId(c.name); setShowSuggestions(false); }}
                         style={{
-                          padding: '8px 12px', cursor: 'pointer', fontSize: 13,
+                          padding: '9px 12px', cursor: 'pointer', fontSize: 13,
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          backgroundColor: 'transparent',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-alt, var(--border))')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                       >
                         <span style={{ fontWeight: 600 }}>{c.name}</span>
                         {c.note && <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>{c.note}</span>}

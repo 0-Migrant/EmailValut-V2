@@ -57,6 +57,9 @@ interface AppActions {
   updateOrder: (id: string, patch: Partial<Omit<Order, 'id' | 'createdAt'>>) => void;
   deleteOrder: (id: string) => void;
 
+  // Clients sync
+  syncClientsFromDoneOrders: () => number;
+
   // Payouts
   addPayout: (data: Omit<PayoutEntry, 'id' | 'createdAt'>) => void;
   addPayouts: (entries: Omit<PayoutEntry, 'id' | 'createdAt'>[]) => void;
@@ -317,6 +320,29 @@ export const useVaultStore = create<VaultStore>()(
           return { clients: [...s.clients, client] };
         });
       },
+      syncClientsFromDoneOrders() {
+        let added = 0;
+        set((s) => {
+          const names = [
+            ...new Set(
+              s.orders
+                .filter((o) => o.status === 'done' && o.customerId?.trim())
+                .map((o) => o.customerId.trim()),
+            ),
+          ];
+          const newClients: Client[] = [];
+          for (const name of names) {
+            const exists = s.clients.some((c) => c.name.toLowerCase() === name.toLowerCase());
+            if (!exists) {
+              newClients.push({ id: uid(), name, createdAt: new Date().toISOString() });
+            }
+          }
+          added = newClients.length;
+          if (!newClients.length) return s;
+          return { clients: [...s.clients, ...newClients] };
+        });
+        return added;
+      },
 
       // ── Delivery Men ──────────────────────────────────────────────────────
       addDeliveryMan(data) {
@@ -361,8 +387,18 @@ export const useVaultStore = create<VaultStore>()(
       },
       setOrderStatus(id, status) {
         set((s) => {
+          const order = s.orders.find((o) => o.id === id);
+          let clients = s.clients;
+          if (status === 'done' && order?.customerId?.trim()) {
+            const name = order.customerId.trim();
+            const exists = clients.some((c) => c.name.toLowerCase() === name.toLowerCase());
+            if (!exists) {
+              clients = [...clients, { id: uid(), name, createdAt: new Date().toISOString() }];
+            }
+          }
           return {
             orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)),
+            clients,
             history: pushHistory(s, 'edit', `Order ${id.slice(-5)} → ${status}`),
           };
         });

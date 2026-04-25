@@ -1,5 +1,5 @@
 import { useModal } from '@/context/ModalContext';
-import { getLoyaltyTier } from '@/lib/utils';
+import { getLoyaltyTier, LOYALTY_TIERS } from '@/lib/utils';
 
 export default function LoyaltyModal() {
   const { loyalty, closeLoyalty } = useModal();
@@ -9,55 +9,68 @@ export default function LoyaltyModal() {
 
   return (
     <div className="modal-bg" onClick={closeLoyalty}>
-      <div className="modal loyalty-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="loyalty-header" style={{ fontSize: 48 }}>{tier.emoji}</div>
-        <h3 style={{ textAlign: 'center', marginBottom: 8 }}>Tier Up!</h3>
-        <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: 16, fontSize: 14 }}>
-          <strong>{loyalty.customerId}</strong> just reached{' '}
-          <strong>{loyalty.orderNum}</strong> orders and is now a{' '}
+      <div className="modal loyalty-modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+
+        {/* Big emoji */}
+        <div style={{ fontSize: 56, textAlign: 'center', marginBottom: 8, lineHeight: 1 }}>
+          {tier.emoji}
+        </div>
+
+        <h3 style={{ textAlign: 'center', marginBottom: 6, fontSize: 18 }}>
+          {tier.label} Tier Reached!
+        </h3>
+
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginBottom: 20, fontSize: 13, lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--text)' }}>{loyalty.customerId}</strong> just completed their{' '}
+          <strong style={{ color: tier.color }}>{loyalty.orderNum}th order</strong> and is now a{' '}
           <strong style={{ color: tier.color }}>{tier.label}</strong> customer!
         </p>
 
+        {/* Highlighted tier box */}
         <div style={{
           background: tier.bg,
-          border: `1px solid ${tier.color}`,
+          border: `1.5px solid ${tier.color}`,
           borderRadius: 10, padding: '14px 18px', marginBottom: 20,
-          display: 'flex', flexDirection: 'column', gap: 6,
+          textAlign: 'center',
         }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: tier.color, textAlign: 'center' }}>
-            {tier.emoji} {tier.label} Tier
+          <div style={{ fontWeight: 700, fontSize: 15, color: tier.color, marginBottom: 4 }}>
+            {tier.emoji} {tier.label}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-            Consider offering them a special discount or loyalty reward.
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            Consider offering a special price or discount as a loyalty reward.
           </div>
         </div>
 
-        {/* All tiers overview */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-          {[
-            { label: 'New',     emoji: '🌱', min: 0   },
-            { label: 'Regular', emoji: '⭐', min: 11  },
-            { label: 'Silver',  emoji: '🥈', min: 21  },
-            { label: 'Gold',    emoji: '🥇', min: 51  },
-            { label: 'VIP',     emoji: '💎', min: 101 },
-          ].map((t) => {
-            const active = t.label === tier.label;
+        {/* All tiers progress bar */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20 }}>
+          {[...LOYALTY_TIERS].reverse().map((t) => {
+            const isActive  = t.label === tier.label;
+            const isPast    = loyalty.orderNum >= t.min;
             return (
-              <div key={t.label} style={{
-                padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: active ? 700 : 400,
-                background: active ? tier.bg : 'var(--surface-alt, var(--border))',
-                border: active ? `1px solid ${tier.color}` : '1px solid transparent',
-                color: active ? tier.color : 'var(--text-hint)',
-                display: 'flex', alignItems: 'center', gap: 4,
-              }}>
-                {t.emoji} {t.label}
+              <div
+                key={t.label}
+                style={{
+                  flex: 1, borderRadius: 6, padding: '6px 4px',
+                  textAlign: 'center', fontSize: 10, fontWeight: isActive ? 700 : 400,
+                  background: isPast ? t.bg : 'var(--surface-alt, rgba(0,0,0,0.04))',
+                  border: `1px solid ${isPast ? t.color : 'var(--border)'}`,
+                  color: isPast ? t.color : 'var(--text-hint)',
+                  outline: isActive ? `2px solid ${t.color}` : 'none',
+                  outlineOffset: 1,
+                  transition: 'all 0.15s',
+                }}
+                title={`${t.emoji} ${t.label} — ${t.min === 0 ? '<10' : `${t.min}+`} orders`}
+              >
+                <div style={{ fontSize: 14 }}>{t.emoji}</div>
+                <div>{t.label}</div>
+                <div style={{ opacity: 0.7 }}>{t.min === 0 ? '<10' : `${t.min}+`}</div>
               </div>
             );
           })}
         </div>
 
         <div className="modal-actions">
-          <button className="btn btn-success btn-sm" onClick={closeLoyalty}>
+          <button className="btn btn-success btn-sm" style={{ flex: 1 }} onClick={closeLoyalty}>
             ✓ Got it
           </button>
         </div>

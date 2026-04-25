@@ -134,11 +134,11 @@ export function calcFee(
 // ─── Loyalty tiers ────────────────────────────────────────────────────────────
 
 export const LOYALTY_TIERS = [
-  { label: 'VIP',     emoji: '💎', color: '#a855f7', bg: 'rgba(168,85,247,0.12)', min: 101 },
-  { label: 'Gold',    emoji: '🥇', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', min: 51  },
-  { label: 'Silver',  emoji: '🥈', color: '#6b7280', bg: 'rgba(107,114,128,0.12)', min: 21  },
-  { label: 'Regular', emoji: '⭐', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', min: 11  },
-  { label: 'New',     emoji: '🌱', color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  min: 0   },
+  { label: 'VIP',     emoji: '💎', color: '#a855f7', bg: 'rgba(168,85,247,0.15)', min: 100 },
+  { label: 'Gold',    emoji: '🥇', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', min: 50  },
+  { label: 'Silver',  emoji: '🥈', color: '#94a3b8', bg: 'rgba(148,163,184,0.18)', min: 20  },
+  { label: 'Regular', emoji: '⭐', color: '#3b82f6', bg: 'rgba(59,130,246,0.13)', min: 10  },
+  { label: 'New',     emoji: '🌱', color: '#22c55e', bg: 'rgba(34,197,94,0.13)',  min: 0   },
 ] as const;
 
 export type LoyaltyTier = typeof LOYALTY_TIERS[number];
@@ -147,8 +147,8 @@ export function getLoyaltyTier(orderCount: number): LoyaltyTier {
   return LOYALTY_TIERS.find((t) => orderCount >= t.min) ?? LOYALTY_TIERS[LOYALTY_TIERS.length - 1];
 }
 
-// Fires when a client crosses into a new tier (at 11, 21, 51, 101)
-const TIER_MILESTONES = new Set([11, 21, 51, 101]);
+// Fires exactly when a client reaches a tier boundary
+const TIER_MILESTONES = new Set([10, 20, 50, 100]);
 
 export function isLoyaltyMilestone(count: number): boolean {
   return TIER_MILESTONES.has(count);

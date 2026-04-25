@@ -4,6 +4,7 @@ export interface Client {
   id: string;
   name: string;
   note?: string;
+  isSpecial?: boolean;
   createdAt: string;
 }
 

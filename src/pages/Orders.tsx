@@ -25,10 +25,12 @@ export default function Orders() {
   const updateOrder   = useVaultStore((s) => s.updateOrder);
   const { showConfirm, openOrderDetail } = useModal();
 
-  const [search, setSearch]         = useState('');
-  const [filter, setFilter]         = useState('all');
-  const [dmFilter, setDmFilter]     = useState('');
-  const [editingPm, setEditingPm]   = useState<string | null>(null); // orderId being edited
+  const [search, setSearch]           = useState('');
+  const [filter, setFilter]           = useState('all');
+  const [dmFilter, setDmFilter]       = useState('');
+  const [editingPm, setEditingPm]   = useState<string | null>(null);
+  const [pricePopup, setPricePopup] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState('');
 
   const filtered = orders.filter((o) => {
     const dm = deliveryMen.find((d) => d.id === o.deliveryManId);
@@ -50,6 +52,20 @@ export default function Orders() {
   function handleStatus(id: string, status: OrderStatus) {
     setStatus(id, status);
   }
+
+  function savePrice() {
+    if (!pricePopup) return;
+    const val = parseFloat(priceInput);
+    if (!isNaN(val) && val >= 0) updateOrder(pricePopup, { customPrice: val });
+    setPricePopup(null);
+  }
+
+  function openPricePopup(o: typeof filtered[number]) {
+    setPricePopup(o.id);
+    setPriceInput(String(orderTotal(o)));
+  }
+
+  const pricePopupOrder = pricePopup ? filtered.find((o) => o.id === pricePopup) ?? orders.find((o) => o.id === pricePopup) : null;
 
   return (
     <>
@@ -92,12 +108,15 @@ export default function Orders() {
                           {o.items.map((oi) => items.find((i) => i.id === oi.itemId)?.name ?? '?').join(', ')}
                         </td>
                         <td>
-                          {info.type === 'discount' && (
-                            <div style={{ fontSize:11, textDecoration:'line-through', color:'var(--text-hint)' }}>{fmt(info.itemsTotal)}</div>
+                          {o.customPrice != null && (
+                            <div style={{ fontSize:10, color:'var(--text-hint)', textDecoration:'line-through' }}>{fmt(info.itemsTotal)} $</div>
                           )}
-                          <div style={{ fontWeight:700, color:'var(--accent)' }}>{fmt(orderTotal(o))} $ USD</div>
-                          {info.type === 'discount'  && <span className="discount-badge">🏷 -{info.pct}%</span>}
-                          {info.type === 'surcharge' && <span className="discount-badge" style={{ background:'var(--orange-bg)', color:'var(--orange)', borderColor:'var(--orange-border)' }}>📈 +{info.pct}%</span>}
+                          <span
+                            style={{ fontWeight:700, color:'var(--accent)', fontSize:13, cursor:'pointer' }}
+                            onClick={() => openPricePopup(o)}
+                          >
+                            {fmt(orderTotal(o))} $
+                          </span>
                         </td>
                         <td>
                           {editingPm === o.id
@@ -169,6 +188,37 @@ export default function Orders() {
           )
         }
       </div>
+
+      {/* Price edit popup */}
+      {pricePopup && pricePopupOrder && (
+        <div className="modal-bg" onClick={() => setPricePopup(null)}>
+          <div className="modal" style={{ width:360 }} onClick={(e) => e.stopPropagation()}>
+            <h3>Edit Order Price</h3>
+            <p>Order #{pricePopupOrder.id.slice(-5)} &nbsp;·&nbsp; Items total: <strong>{fmt(pricePopupOrder.items.reduce((a, oi) => a + oi.price * oi.qty, 0))} $</strong></p>
+            <label style={{ fontSize:12, color:'var(--text-hint)', fontWeight:600, display:'block', marginBottom:6 }}>Custom Price ($)</label>
+            <input
+              type="number"
+              className="inp"
+              style={{ width:'100%', marginBottom:20 }}
+              autoFocus
+              min={0}
+              step={0.01}
+              value={priceInput}
+              onChange={(e) => setPriceInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') savePrice(); if (e.key === 'Escape') setPricePopup(null); }}
+            />
+            <div className="modal-actions">
+              {pricePopupOrder.customPrice != null && (
+                <button className="btn btn-ghost btn-sm" onClick={() => { updateOrder(pricePopup, { customPrice: null }); setPricePopup(null); }}>
+                  Reset to Default
+                </button>
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={() => setPricePopup(null)}>Cancel</button>
+              <button className="btn btn-primary btn-sm" onClick={savePrice}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

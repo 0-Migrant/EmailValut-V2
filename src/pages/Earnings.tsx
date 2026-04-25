@@ -73,7 +73,7 @@ export default function Earnings() {
   const [analyticsFrom,   setAnalyticsFrom]   = useState('');
   const [analyticsTo,     setAnalyticsTo]     = useState('');
 
-  const platformFees = settings.platformFees ?? [];
+  const paymentMethodFees = settings.paymentMethodFees ?? [];
 
   // ── Orders base data ──────────────────────────────────────────────────────────
   const doneOrders = orders.filter((o) => o.status === 'done');
@@ -83,7 +83,7 @@ export default function Earnings() {
 
   // Orders NOT linked to any wallet (unassigned revenue)
   const unlinkedOrders = doneOrders.filter((o) => !allLinkedMethods.includes(o.paymentMethod));
-  const unlinkedNet    = unlinkedOrders.reduce((a, o) => a + orderTotal(o) - calcFee(o, platformFees), 0);
+  const unlinkedNet    = unlinkedOrders.reduce((a, o) => a + orderTotal(o) - calcFee(o, paymentMethodFees), 0);
 
   // Legacy pool manual adjustments (old __pool__ entries)
   const legacyPoolAdj = payouts
@@ -107,7 +107,7 @@ export default function Earnings() {
     const orderRevenue = linkedMethods.length > 0
       ? doneOrders
           .filter((o) => linkedMethods.includes(o.paymentMethod))
-          .reduce((a, o) => a + orderTotal(o) - calcFee(o, platformFees), 0)
+          .reduce((a, o) => a + orderTotal(o) - calcFee(o, paymentMethodFees), 0)
       : 0;
 
     // Manual adjustments (credit adds, debit removes)

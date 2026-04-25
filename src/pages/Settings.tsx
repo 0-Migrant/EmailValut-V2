@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
-import type { PlatformFee } from '@/lib/types';
+import type { PaymentMethodFee } from '@/lib/types';
 import Icon from '@/components/Icon';
 
 
@@ -15,9 +15,9 @@ export default function Settings() {
   const [pmLabel,       setPmLabel]      = useState('');
   const [pmDetail,      setPmDetail]     = useState('');
   const [newPlatform,   setNewPlatform]  = useState('');
-  const [feePlatform,   setFeePlatform]  = useState('');
-  const [feeType,       setFeeType]      = useState<'pct' | 'amount'>('pct');
-  const [feeValue,      setFeeValue]     = useState('');
+  const [feePmLabel,    setFeePmLabel]   = useState('');
+  const [feePct,        setFeePct]       = useState('');
+  const [feeAmount,     setFeeAmount]    = useState('');
   const [newWalletName,  setNewWalletName]  = useState('');
   const [editingWallet,  setEditingWallet]  = useState<string | null>(null);
   const [editWalletName, setEditWalletName] = useState('');
@@ -170,43 +170,48 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Platform Fees */}
+          {/* Payment Method Fees */}
           <div className="card">
             <div className="settings-section-header">
               <div className="settings-section-icon"><Icon name="pdf" size={16} color="#fff" /></div>
               <div className="settings-section-text">
-                <div className="settings-section-title">Platform Fees</div>
+                <div className="settings-section-title">Payment Method Fees</div>
                 <div className="settings-section-sub">Deducted from gross revenue when calculating net earnings</div>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              {(settings.platformFees ?? []).length === 0
-                ? <div style={{ fontSize: 13, color: 'var(--text-hint)' }}>No platform fees configured.</div>
-                : (settings.platformFees ?? []).map((f) => (
-                  <div key={f.platform} className="pm-item">
-                    <div className="pm-avatar" style={{ borderRadius: 6 }}>{f.platform.charAt(0)}</div>
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{f.platform}</span>
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)', marginRight: 4 }}>
-                      {f.feeType === 'pct' ? `${f.value}%` : `$${fmt(f.value)}`}
-                    </span>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ padding: '2px 8px', fontSize: 12 }}
-                      onClick={() => {
-                        setFeePlatform(f.platform);
-                        setFeeType(f.feeType);
-                        setFeeValue(String(f.value));
-                        updateSettings({ platformFees: (settings.platformFees ?? []).filter((x) => x.platform !== f.platform) });
-                      }}
-                    ><Icon name="edit" size={11} style={{ marginRight: 3 }} />Edit</button>
-                    <button
-                      className="btn btn-danger btn-sm"
-                      style={{ padding: '2px 8px', fontSize: 12 }}
-                      onClick={() => updateSettings({ platformFees: (settings.platformFees ?? []).filter((x) => x.platform !== f.platform) })}
-                    ><Icon name="x" size={11} /></button>
-                  </div>
-                ))
+              {(settings.paymentMethodFees ?? []).length === 0
+                ? <div style={{ fontSize: 13, color: 'var(--text-hint)' }}>No payment method fees configured.</div>
+                : (settings.paymentMethodFees ?? []).map((f) => {
+                    const parts = [];
+                    if (f.pct != null) parts.push(`${f.pct}%`);
+                    if (f.amount != null) parts.push(`$${fmt(f.amount)}`);
+                    return (
+                      <div key={f.paymentMethod} className="pm-item">
+                        <div className="pm-avatar" style={{ borderRadius: 6 }}>{f.paymentMethod.charAt(0)}</div>
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{f.paymentMethod}</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-muted)', marginRight: 4 }}>
+                          {parts.join(' + ')}
+                        </span>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '2px 8px', fontSize: 12 }}
+                          onClick={() => {
+                            setFeePmLabel(f.paymentMethod);
+                            setFeePct(f.pct != null ? String(f.pct) : '');
+                            setFeeAmount(f.amount != null ? String(f.amount) : '');
+                            updateSettings({ paymentMethodFees: (settings.paymentMethodFees ?? []).filter((x) => x.paymentMethod !== f.paymentMethod) });
+                          }}
+                        ><Icon name="edit" size={11} style={{ marginRight: 3 }} />Edit</button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          style={{ padding: '2px 8px', fontSize: 12 }}
+                          onClick={() => updateSettings({ paymentMethodFees: (settings.paymentMethodFees ?? []).filter((x) => x.paymentMethod !== f.paymentMethod) })}
+                        ><Icon name="x" size={11} /></button>
+                      </div>
+                    );
+                  })
               }
             </div>
 
@@ -214,41 +219,50 @@ export default function Settings() {
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div className="field-label">Platform</div>
-                <select className="inp" style={{ minWidth: 130 }} value={feePlatform} onChange={(e) => setFeePlatform(e.target.value)}>
-                  <option value="">Select platform...</option>
-                  {(settings.platforms ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
+                <div className="field-label">Payment Method</div>
+                <select className="inp" style={{ minWidth: 140 }} value={feePmLabel} onChange={(e) => setFeePmLabel(e.target.value)}>
+                  <option value="">Select method...</option>
+                  {(settings.paymentMethods ?? []).map((m) => <option key={m.id} value={m.label}>{m.label}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div className="field-label">Fee Type</div>
-                <select className="inp" style={{ width: 130 }} value={feeType} onChange={(e) => setFeeType(e.target.value as 'pct' | 'amount')}>
-                  <option value="pct">Percentage %</option>
-                  <option value="amount">Flat Amount $</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div className="field-label">Value</div>
+                <div className="field-label">% Fee</div>
                 <input
                   className="inp"
                   type="number"
                   min="0"
                   step="0.01"
                   style={{ width: 90 }}
-                  placeholder={feeType === 'pct' ? 'e.g. 5' : 'e.g. 2.50'}
-                  value={feeValue}
-                  onChange={(e) => setFeeValue(e.target.value)}
+                  placeholder="e.g. 4.4"
+                  value={feePct}
+                  onChange={(e) => setFeePct(e.target.value)}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="field-label">Flat $ Fee</div>
+                <input
+                  className="inp"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  style={{ width: 90 }}
+                  placeholder="e.g. 0.30"
+                  value={feeAmount}
+                  onChange={(e) => setFeeAmount(e.target.value)}
                 />
               </div>
               <button
                 className="btn btn-ghost"
                 onClick={() => {
-                  const val = parseFloat(feeValue);
-                  if (!feePlatform || isNaN(val) || val < 0) return;
-                  const newFee: PlatformFee = { platform: feePlatform, feeType, value: val };
-                  const existing = (settings.platformFees ?? []).filter((x) => x.platform !== feePlatform);
-                  updateSettings({ platformFees: [...existing, newFee] });
-                  setFeePlatform(''); setFeeValue('');
+                  const pct = feePct !== '' ? parseFloat(feePct) : null;
+                  const amt = feeAmount !== '' ? parseFloat(feeAmount) : null;
+                  if (!feePmLabel || (pct == null && amt == null)) return;
+                  if (pct != null && (isNaN(pct) || pct < 0)) return;
+                  if (amt != null && (isNaN(amt) || amt < 0)) return;
+                  const newFee: PaymentMethodFee = { paymentMethod: feePmLabel, pct, amount: amt };
+                  const existing = (settings.paymentMethodFees ?? []).filter((x) => x.paymentMethod !== feePmLabel);
+                  updateSettings({ paymentMethodFees: [...existing, newFee] });
+                  setFeePmLabel(''); setFeePct(''); setFeeAmount('');
                 }}
               >Save Fee</button>
             </div>

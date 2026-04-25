@@ -80,10 +80,10 @@ export interface PaymentMethod {
   detail: string;
 }
 
-export interface PlatformFee {
-  platform: string;
-  feeType: 'pct' | 'amount';
-  value: number;
+export interface PaymentMethodFee {
+  paymentMethod: string;
+  pct: number | null;   // e.g. 4.4 for 4.4%
+  amount: number | null; // e.g. 0.30 for $0.30
 }
 
 export interface Wallet {
@@ -112,7 +112,7 @@ export interface Settings {
   theme: 'light' | 'dark';
   paymentMethods: PaymentMethod[];
   platforms: string[];
-  platformFees: PlatformFee[];
+  paymentMethodFees: PaymentMethodFee[];
   wallets: Wallet[];
   hideResourceAccounts: boolean;
 }

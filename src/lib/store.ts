@@ -109,7 +109,7 @@ const DEFAULT_SETTINGS: Settings = {
     { id: 'pm-3', label: 'Binance', detail: '' },
   ],
   platforms: ['WhatsApp', 'Instagram', 'Phone Call', 'Walk-in', 'Discord'],
-  platformFees: [],
+  paymentMethodFees: [],
   wallets: [],
   hideResourceAccounts: false,
 };

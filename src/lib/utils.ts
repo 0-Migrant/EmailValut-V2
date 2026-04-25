@@ -120,13 +120,15 @@ export function statusLabel(status: string): string {
 // ─── Platform fee helper ──────────────────────────────────────────────────────
 
 export function calcFee(
-  order: Pick<Order, 'items' | 'customPrice' | 'discountPct' | 'source'>,
-  platformFees: import('./types').PlatformFee[],
+  order: Pick<Order, 'items' | 'customPrice' | 'discountPct' | 'paymentMethod'>,
+  paymentMethodFees: import('./types').PaymentMethodFee[],
 ): number {
-  const fee = platformFees.find((f) => f.platform === order.source);
+  const fee = paymentMethodFees.find((f) => f.paymentMethod === order.paymentMethod);
   if (!fee) return 0;
   const total = orderTotal(order);
-  return fee.feeType === 'pct' ? total * (fee.value / 100) : fee.value;
+  const pctPart = fee.pct != null ? total * (fee.pct / 100) : 0;
+  const amtPart = fee.amount ?? 0;
+  return pctPart + amtPart;
 }
 
 // ─── Loyalty check ────────────────────────────────────────────────────────────

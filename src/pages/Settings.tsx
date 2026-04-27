@@ -454,6 +454,47 @@ export default function Settings() {
                               </>
                           }
                         </div>
+                        <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+                          <div className="field-label" style={{ marginBottom: 8 }}>Distribution Fee</div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <input
+                                className="inp inp-sm"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                style={{ width: 80 }}
+                                placeholder="0"
+                                value={w.distFeePct ?? ''}
+                                onChange={(e) => {
+                                  const raw = e.target.value;
+                                  updateWallet(w.id, { distFeePct: raw === '' ? null : parseFloat(raw) || null });
+                                }}
+                              />
+                              <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>%</span>
+                            </div>
+                            <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>+</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <input
+                                className="inp inp-sm"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                style={{ width: 80 }}
+                                placeholder="0"
+                                value={w.distFeeAmount ?? ''}
+                                onChange={(e) => {
+                                  const raw = e.target.value;
+                                  updateWallet(w.id, { distFeeAmount: raw === '' ? null : parseFloat(raw) || null });
+                                }}
+                              />
+                              <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>$</span>
+                            </div>
+                            {((w.distFeePct ?? 0) > 0 || (w.distFeeAmount ?? 0) > 0) && (
+                              <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>charged per distribution</span>
+                            )}
+                          </div>
+                        </div>
                         <div style={{ padding: '10px 12px' }}>
                           <div className="field-label" style={{ marginBottom: 8 }}>Assign payment methods</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

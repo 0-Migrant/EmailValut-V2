@@ -105,6 +105,8 @@ export interface Wallet {
   id: string;
   name: string;
   paymentMethods: string[]; // payment method labels whose order revenue flows into this wallet
+  distFeePct?: number | null;    // distribution fee percentage (e.g. 2 for 2%)
+  distFeeAmount?: number | null; // distribution fee fixed amount (e.g. 1.50)
 }
 
 export interface PayoutEntry {

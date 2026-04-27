@@ -10,7 +10,8 @@ const WALLET_ADJ  = '__wallet_adj__';
 interface DistRow {
   id: string;
   workerId: string;
-  value: string;
+  pct: string;    // percentage of distTotal
+  amount: string; // fixed dollar amount
 }
 
 // Simple horizontal bar used in the Analytics sub-tab
@@ -51,11 +52,12 @@ export default function Earnings() {
   const [outAmounts, setOutAmounts] = useState<Record<string, string>>({});
 
   // Distribute panel state
-  const [distAmount,   setDistAmount]   = useState('');
-  const [distMode,     setDistMode]     = useState<'pct' | 'amount'>('pct');
-  const [distNote,     setDistNote]     = useState('');
-  const [distRows,     setDistRows]     = useState<DistRow[]>([]);
-  const [distWalletId, setDistWalletId] = useState('');
+  const [distAmount,    setDistAmount]    = useState('');
+  const [distMode,      setDistMode]      = useState<'pct' | 'amount'>('pct');
+  const [distNote,      setDistNote]      = useState('');
+  const [distRows,      setDistRows]      = useState<DistRow[]>([]);
+  const [distWalletId,  setDistWalletId]  = useState('');
+  const [applyDistFee,  setApplyDistFee]  = useState(true);
 
   // Wallet adjustment state
   const [poolAmount, setPoolAmount] = useState('');
@@ -146,23 +148,26 @@ export default function Earnings() {
   const distInput = Math.min(parseFloat(distAmount) || 0, distMode === 'pct' ? 100 : Infinity);
   const distTotal = distMode === 'pct' ? distBase * (distInput / 100) : distInput;
 
-  function computeShare(value: string, mode: 'pct' | 'amount', base: number): number {
-    const v = parseFloat(value);
-    if (isNaN(v) || v <= 0 || base <= 0) return 0;
-    return mode === 'pct' ? base * (v / 100) : v;
+  // Per-wallet fee config
+  const selectedWallet    = distWalletId ? wallets.find((w) => w.id === distWalletId) : null;
+  const walletFeePct      = selectedWallet?.distFeePct ?? 0;
+  const walletFeeAmt      = selectedWallet?.distFeeAmount ?? 0;
+  const hasFeeConfigured  = (walletFeePct || 0) > 0 || (walletFeeAmt || 0) > 0;
+  const distFeeValue      = distTotal * ((walletFeePct || 0) / 100) + (walletFeeAmt || 0);
+  const effectiveFee      = applyDistFee && hasFeeConfigured ? distFeeValue : 0;
+
+  function computeWorkerShare(row: DistRow, base: number): number {
+    const p = parseFloat(row.pct) || 0;
+    const a = parseFloat(row.amount) || 0;
+    return (base > 0 ? base * (p / 100) : 0) + a;
   }
 
-  const workerPctSum  = distMode === 'pct'
-    ? distRows.reduce((a, r) => a + (parseFloat(r.value) || 0), 0)
-    : null;
-  const workerPctOver = workerPctSum !== null && workerPctSum > 100;
-
-  const allocated   = distRows.reduce((a, r) => a + computeShare(r.value, distMode, distTotal), 0);
-  const unallocated = distTotal - allocated;
-  const workerAmtOver = distMode === 'amount' && allocated > distTotal;
+  const allocated     = distRows.reduce((a, r) => a + computeWorkerShare(r, distTotal), 0);
+  const unallocated   = distTotal - allocated;
+  const workerAmtOver = allocated > distTotal + 0.001;
 
   function addDistRow() {
-    setDistRows((prev) => [...prev, { id: uid(), workerId: '', value: '' }]);
+    setDistRows((prev) => [...prev, { id: uid(), workerId: '', pct: '', amount: '' }]);
   }
 
   function updateDistRow(id: string, patch: Partial<DistRow>) {
@@ -176,21 +181,29 @@ export default function Earnings() {
   function confirmDistribution() {
     if (!distWalletId && wallets.length > 0) { alert('Select a source wallet before distributing.'); return; }
     if (distTotal <= 0) { alert('Enter the amount to distribute first.'); return; }
-    if (workerPctOver) { alert('Worker percentages exceed 100%. Reduce them before confirming.'); return; }
     if (workerAmtOver) { alert('Worker amounts exceed the distribute total. Reduce them before confirming.'); return; }
-    const valid = distRows.filter((r) => r.workerId && computeShare(r.value, distMode, distTotal) > 0);
-    if (!valid.length) { alert('Add at least one worker with a valid value.'); return; }
+    const valid = distRows.filter((r) => r.workerId && computeWorkerShare(r, distTotal) > 0);
+    if (!valid.length) { alert('Add at least one worker with a valid share.'); return; }
     const date = new Date().toLocaleDateString();
     const note = distNote.trim() || `Distribution ${date}`;
     addPayouts(valid.map((r) => ({
-      workerId:  r.workerId,
-      walletId:  distWalletId || undefined,
-      amount:    computeShare(r.value, distMode, distTotal),
-      type:      'debit' as const,
-      status:    'pending' as const,
+      workerId: r.workerId,
+      walletId: distWalletId || undefined,
+      amount:   computeWorkerShare(r, distTotal),
+      type:     'debit' as const,
+      status:   'pending' as const,
       note,
     })));
-    setDistAmount(''); setDistNote(''); setDistRows([]); setDistWalletId('');
+    if (effectiveFee > 0 && distWalletId) {
+      addPayout({
+        workerId: WALLET_ADJ,
+        walletId: distWalletId,
+        amount:   effectiveFee,
+        type:     'debit',
+        note:     `Distribution fee — ${note}`,
+      });
+    }
+    setDistAmount(''); setDistNote(''); setDistRows([]); setDistWalletId(''); setApplyDistFee(true);
   }
 
   function handleWalletAdjust(walletId: string, type: 'credit' | 'debit') {
@@ -697,31 +710,48 @@ export default function Earnings() {
                 <div className="dist-step-num">2</div>
                 <div className="dist-step-body">
                   <div className="dist-step-label">Assign shares to workers</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-hint)', marginBottom: 6 }}>Each worker can receive a % of the total <em>and/or</em> a fixed $ amount.</div>
                   {distRows.map((row) => {
-                    const computed = computeShare(row.value, distMode, distTotal);
-                    const hasValue = parseFloat(row.value) > 0;
+                    const computed = computeWorkerShare(row, distTotal);
+                    const hasValue = computed > 0;
                     return (
                       <div key={row.id} className="dist-worker-row">
                         <select
                           className="inp"
-                          style={{ width: 160, flexShrink: 0 }}
+                          style={{ width: 150, flexShrink: 0 }}
                           value={row.workerId}
                           onChange={(e) => updateDistRow(row.id, { workerId: e.target.value })}
                         >
                           <option value="">Select worker...</option>
                           {deliveryMen.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
-                        <input
-                          className="inp"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          style={{ width: 90, flexShrink: 0 }}
-                          placeholder={distMode === 'pct' ? 'e.g. 30' : 'e.g. 50'}
-                          value={row.value}
-                          onChange={(e) => updateDistRow(row.id, { value: e.target.value })}
-                        />
-                        <span style={{ fontSize: 12, color: 'var(--text-hint)', fontWeight: 600, flexShrink: 0 }}>{distMode === 'pct' ? '%' : '$'}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                          <input
+                            className="inp"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            style={{ width: 72 }}
+                            placeholder="0"
+                            value={row.pct}
+                            onChange={(e) => updateDistRow(row.id, { pct: e.target.value })}
+                          />
+                          <span style={{ fontSize: 12, color: 'var(--text-hint)', fontWeight: 600 }}>%</span>
+                        </div>
+                        <span style={{ fontSize: 12, color: 'var(--text-hint)', flexShrink: 0 }}>+</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                          <input
+                            className="inp"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            style={{ width: 72 }}
+                            placeholder="0"
+                            value={row.amount}
+                            onChange={(e) => updateDistRow(row.id, { amount: e.target.value })}
+                          />
+                          <span style={{ fontSize: 12, color: 'var(--text-hint)', fontWeight: 600 }}>$</span>
+                        </div>
                         {hasValue && distTotal > 0 && (
                           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', flexShrink: 0 }}>= {fmt(computed)} $</span>
                         )}
@@ -737,10 +767,32 @@ export default function Earnings() {
                 </div>
               </div>
 
+              {/* Fee checkbox — shown when wallet has a fee configured */}
+              {hasFeeConfigured && distTotal > 0 && (
+                <div className="dist-step">
+                  <div className="dist-step-num" style={{ background: 'var(--orange)' }}>F</div>
+                  <div className="dist-step-body">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={applyDistFee}
+                        onChange={(e) => setApplyDistFee(e.target.checked)}
+                        style={{ width: 15, height: 15, cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>Apply distribution fee</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>
+                        {walletFeePct ? `${walletFeePct}%` : ''}{walletFeePct && walletFeeAmt ? ' + ' : ''}{walletFeeAmt ? `${fmt(walletFeeAmt)} $` : ''}
+                        {' '}= <span style={{ color: 'var(--orange)', fontWeight: 700 }}>{fmt(distFeeValue)} $</span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
               {/* Step 3 — Summary & Confirm */}
               {distRows.length > 0 && (
                 <div className="dist-step">
-                  <div className="dist-step-num" style={{ background: workerPctOver || workerAmtOver ? 'var(--red)' : 'var(--green)' }}>3</div>
+                  <div className="dist-step-num" style={{ background: workerAmtOver ? 'var(--red)' : 'var(--green)' }}>3</div>
                   <div className="dist-step-body">
                     <div className="dist-step-label">Review & confirm</div>
                     <div className="dist-summary">
@@ -760,31 +812,31 @@ export default function Earnings() {
                       </div>
                       <div className="dist-summary-item">
                         <span className="dist-summary-label">Allocated</span>
-                        <span className="dist-summary-value" style={{ color: (workerPctOver || workerAmtOver) ? 'var(--red)' : 'var(--green)' }}>
-                          {fmt(allocated)} $
-                          {distMode === 'pct' && workerPctSum !== null && (
-                            <span style={{ fontSize: 12, marginLeft: 4 }}>({workerPctSum.toFixed(1)}%)</span>
-                          )}
-                        </span>
+                        <span className="dist-summary-value" style={{ color: workerAmtOver ? 'var(--red)' : 'var(--green)' }}>{fmt(allocated)} $</span>
                       </div>
                       <div className="dist-summary-item">
                         <span className="dist-summary-label">Unallocated</span>
                         <span className="dist-summary-value" style={{ color: unallocated >= 0 ? 'var(--text-muted)' : 'var(--red)' }}>{fmt(Math.abs(unallocated))} $</span>
                       </div>
+                      {effectiveFee > 0 && (
+                        <div className="dist-summary-item">
+                          <span className="dist-summary-label">Distribution Fee</span>
+                          <span className="dist-summary-value" style={{ color: 'var(--orange)' }}>−{fmt(effectiveFee)} $</span>
+                        </div>
+                      )}
                     </div>
-                    {(workerPctOver || workerAmtOver) && (
+                    {workerAmtOver && (
                       <div style={{ marginTop: 8, fontSize: 12, color: 'var(--red)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <Icon name="info" size={13} />
-                        {workerPctOver ? 'Worker percentages exceed 100%.' : 'Worker amounts exceed the distribute total.'}
+                        <Icon name="info" size={13} />Worker amounts exceed the distribute total.
                       </div>
                     )}
                     <button
-                      className={`btn btn-sm ${workerPctOver || workerAmtOver ? 'btn-danger' : 'btn-primary'}`}
+                      className={`btn btn-sm ${workerAmtOver ? 'btn-danger' : 'btn-primary'}`}
                       style={{ marginTop: 12 }}
                       onClick={confirmDistribution}
-                      disabled={workerPctOver || workerAmtOver}
+                      disabled={workerAmtOver}
                     >
-                      {workerPctOver || workerAmtOver
+                      {workerAmtOver
                         ? <><Icon name="x" size={13} style={{ marginRight: 5 }} />Over Limit</>
                         : <><Icon name="check" size={13} style={{ marginRight: 5 }} />Confirm Distribution</>}
                     </button>

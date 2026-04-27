@@ -98,6 +98,7 @@ export function statusBadgeClass(status: string): string {
   switch (status) {
     case 'done':             return 'badge-done';
     case 'accepted':         return 'badge-accepted';
+    case 'delivering':       return 'badge-accepted';
     case 'delivered':        return 'badge-delivered';
     case 'waiting_payment':  return 'badge-waiting-payment';
     case 'payment_complete': return 'badge-payment-complete';
@@ -109,6 +110,7 @@ export function statusLabel(status: string): string {
   switch (status) {
     case 'waiting':          return 'Waiting';
     case 'accepted':         return 'Accepted';
+    case 'delivering':       return 'Delivering';
     case 'delivered':        return 'Delivered';
     case 'waiting_payment':  return 'Waiting for Payment';
     case 'payment_complete': return 'Payment Complete';

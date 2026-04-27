@@ -63,6 +63,7 @@ body.dark {
   --red-bg: #1f0a0a;
   --red-border: #7f1d1d;
   --purple-bg: #1e1040;
+  --purple: #a78bfa;
 }
 
 * {
@@ -588,6 +589,28 @@ tbody td {
   background: #f0fdfa;
   color: #0f766e;
   border: 1px solid #99f6e4
+}
+
+body.dark .badge-waiting {
+  background: #2a1f00;
+  color: #fbbf24;
+  border-color: #78490a
+}
+
+body.dark .badge-delivered {
+  background: var(--stock-bg);
+  color: #60a5fa;
+  border-color: var(--stock-border)
+}
+
+body.dark .badge-waiting-payment {
+  border-color: #6d28d9
+}
+
+body.dark .badge-payment-complete {
+  background: #052420;
+  color: #2dd4bf;
+  border-color: #0f766e
 }
 
 /* ITEMS PAGE — two-column layout */

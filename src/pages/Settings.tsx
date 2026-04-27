@@ -128,6 +128,17 @@ export default function Settings() {
 
             <div className="setting-row">
               <div>
+                <div className="setting-label">Worker Full Access</div>
+                <div className="setting-desc">Allow workers to access the full app (except Worker Accounts). Worker Portal remains available.</div>
+              </div>
+              <label className="toggle">
+                <input type="checkbox" checked={!!settings.workerFullAccess} onChange={(e) => updateSettings({ workerFullAccess: e.target.checked })} />
+                <span className="toggle-track" />
+              </label>
+            </div>
+
+            <div className="setting-row">
+              <div>
                 <div className="setting-label">Rows Per Page</div>
                 <div className="setting-desc">Default number of rows to show in tables</div>
               </div>

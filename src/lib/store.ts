@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
-  Item, DeliveryMan, Order, OrderStatus,
+  Item, DeliveryMan, Order, OrderStatus, WorkerStatus,
   Credential, Stock, HistoryEntry, Settings, Bundle, PayoutEntry, Wallet, Client,
 } from './types';
 import { uid } from './utils';
@@ -50,6 +50,9 @@ interface AppActions {
   addDeliveryMan: (data: Omit<DeliveryMan, 'id'>) => void;
   updateDeliveryMan: (id: string, data: Partial<Omit<DeliveryMan, 'id'>>) => void;
   deleteDeliveryMan: (id: string) => void;
+  setWorkerStatus: (id: string, status: WorkerStatus) => void;
+  freezeWorker: (id: string) => void;
+  unfreezeWorker: (id: string) => void;
 
   // Orders
   addOrder: (data: Omit<Order, 'id' | 'createdAt'>) => Order;
@@ -122,6 +125,7 @@ const DEFAULT_SETTINGS: Settings = {
   paymentMethodFees: [],
   wallets: [],
   hideResourceAccounts: false,
+  workerFullAccess: false,
 };
 
 // ─── Helper: add history entry ────────────────────────────────────────────────
@@ -347,8 +351,9 @@ export const useVaultStore = create<VaultStore>()(
       // ── Delivery Men ──────────────────────────────────────────────────────
       addDeliveryMan(data) {
         set((s) => {
+          const dm: DeliveryMan = { id: uid(), ...data };
           return {
-            deliveryMen: [...s.deliveryMen, { id: uid(), ...data }],
+            deliveryMen: [...s.deliveryMen, dm],
             history: pushHistory(s, 'add', `Added delivery man: ${data.name}`),
           };
         });
@@ -360,6 +365,21 @@ export const useVaultStore = create<VaultStore>()(
             history: pushHistory(s, 'edit', `Updated delivery man: ${data.name ?? id}`),
           };
         });
+      },
+      setWorkerStatus(id, status) {
+        set((s) => ({
+          deliveryMen: s.deliveryMen.map((d) => (d.id === id ? { ...d, status } : d)),
+        }));
+      },
+      freezeWorker(id) {
+        set((s) => ({
+          deliveryMen: s.deliveryMen.map((d) => (d.id === id ? { ...d, frozen: true, status: 'offline' } : d)),
+        }));
+      },
+      unfreezeWorker(id) {
+        set((s) => ({
+          deliveryMen: s.deliveryMen.map((d) => (d.id === id ? { ...d, frozen: false } : d)),
+        }));
       },
       deleteDeliveryMan(id) {
         set((s) => {

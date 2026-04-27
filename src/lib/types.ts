@@ -26,9 +26,15 @@ export interface Bundle {
   items: BundleItem[];
 }
 
+export type WorkerStatus = 'available' | 'busy' | 'offline';
+
 export interface DeliveryMan {
   id: string;
   name: string;
+  username?: string;
+  password?: string;
+  status?: WorkerStatus;
+  frozen?: boolean;
 }
 
 export interface OrderItem {
@@ -39,7 +45,7 @@ export interface OrderItem {
   stockId?: string;
 }
 
-export type OrderStatus = 'waiting' | 'accepted' | 'delivered' | 'waiting_payment' | 'payment_complete' | 'done';
+export type OrderStatus = 'waiting' | 'accepted' | 'delivering' | 'delivered' | 'waiting_payment' | 'payment_complete' | 'done';
 
 export interface Order {
   id: string;
@@ -123,6 +129,7 @@ export interface Settings {
   paymentMethodFees: PaymentMethodFee[];
   wallets: Wallet[];
   hideResourceAccounts: boolean;
+  workerFullAccess: boolean;
 }
 
 export interface BundleItem {

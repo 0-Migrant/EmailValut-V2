@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
-import { fmt, fmtDateTime, orderTotal, getPriceInfo, statusBadgeClass, statusLabel, getLoyaltyTier } from '@/lib/utils';
+import { fmt, fmtDateTime, orderTotal, getPriceInfo, calcFee, statusBadgeClass, statusLabel, getLoyaltyTier } from '@/lib/utils';
 import type { OrderStatus } from '@/lib/types';
 import Icon from '@/components/Icon';
 
@@ -9,6 +9,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'all',             label: 'All Orders' },
   { value: 'waiting',         label: 'Waiting' },
   { value: 'accepted',        label: 'Accepted' },
+  { value: 'delivering',      label: 'Delivering' },
   { value: 'delivered',       label: 'Delivered' },
   { value: 'waiting_payment', label: 'Waiting for Payment' },
   { value: 'payment_complete',label: 'Payment Complete' },
@@ -129,6 +130,15 @@ export default function Orders() {
                           >
                             {fmt(orderTotal(o))} $
                           </span>
+                          {(() => {
+                            const fee = calcFee(o, settings.paymentMethodFees ?? []);
+                            if (!fee) return null;
+                            return (
+                              <div style={{ fontSize:10, color:'var(--text-hint)', marginTop:2 }}>
+                                -{fmt(fee)} fee → <strong style={{ color:'var(--text-muted)' }}>{fmt(orderTotal(o) - fee)} $</strong>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td>
                           {editingPm === o.id

@@ -156,6 +156,11 @@ export default function NewOrder() {
 
   function submit() {
     if (!dmId) { alert('Please select a worker.'); return; }
+    const selectedDm = deliveryMen.find((d) => d.id === dmId);
+    if (selectedDm && (selectedDm.frozen || selectedDm.status !== 'available')) {
+      alert('This worker is not available. Please select an available worker.');
+      return;
+    }
     const validItems = orderItems.filter((oi) => oi.qty > 0);
     if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
     const cp2 = customPrice !== '' && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : null;
@@ -205,7 +210,15 @@ export default function NewOrder() {
               <label>Worker</label>
               <select className="inp" value={dmId} onChange={(e) => setDmId(e.target.value)}>
                 <option value="">— Select worker —</option>
-                {deliveryMen.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {deliveryMen.map((d) => {
+                  const available = !d.frozen && d.status === 'available';
+                  const statusText = d.frozen ? 'Frozen' : (d.status === 'busy' ? 'Busy' : d.status === 'offline' ? 'Offline' : null);
+                  return (
+                    <option key={d.id} value={d.id} disabled={!available}>
+                      {d.name}{statusText ? ` — ${statusText}` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div className="field">

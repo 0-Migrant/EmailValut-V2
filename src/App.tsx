@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useState, useEffect } from 'react';
 import Sidebar from './components/layout/Sidebar';
@@ -7,6 +7,7 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import OrderDetailModal from './components/modals/OrderDetailModal';
 import LoyaltyModal from './components/modals/LoyaltyModal';
 import { ModalProvider } from './context/ModalContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { useVaultStore } from './lib/store';
 import * as StoreModule from './lib/store';
 import { supabase, isSupabaseEnabled } from './lib/supabase';
@@ -24,6 +25,9 @@ import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import Earnings from './pages/Earnings';
 import Clients from './pages/Clients';
+import WorkerPortal from './pages/WorkerPortal';
+import AdminWorkers from './pages/AdminWorkers';
+import LoginPage from './pages/LoginPage';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -67,15 +71,30 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function App() {
-  return (
-    <Router>
-      <Helmet>
-        <title>Instant-Play</title>
-        <meta name="description" content="Secure email credentials and order management system" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </Helmet>
-      
+function AppRoutes() {
+  const { session } = useAuth();
+  const settings = useVaultStore((s) => s.settings);
+
+  // No session → login page for every route
+  if (!session) {
+    return (
+      <Routes>
+        <Route path="*" element={<LoginPage />} />
+      </Routes>
+    );
+  }
+
+  // Worker session — full access or portal-only depending on setting
+  if (session.type === 'worker') {
+    if (!settings.workerFullAccess) {
+      return (
+        <Routes>
+          <Route path="/worker" element={<WorkerPortal />} />
+          <Route path="*" element={<Navigate to="/worker" replace />} />
+        </Routes>
+      );
+    }
+    return (
       <AppLayout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -90,8 +109,49 @@ function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/earnings" element={<Earnings />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/worker" element={<WorkerPortal />} />
+          <Route path="/admin" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>
+    );
+  }
+
+  // Admin session → full app
+  return (
+    <AppLayout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/new-order" element={<NewOrder />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/items" element={<Items />} />
+        <Route path="/bundles" element={<Bundles />} />
+        <Route path="/delivery" element={<Delivery />} />
+        <Route path="/credentials" element={<Credentials />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/earnings" element={<Earnings />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/admin" element={<AdminWorkers />} />
+        <Route path="/worker" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AppLayout>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <Helmet>
+          <title>Instant-Play</title>
+          <meta name="description" content="Secure email credentials and order management system" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+        </Helmet>
+        <AppRoutes />
+      </AuthProvider>
     </Router>
   );
 }

@@ -14,7 +14,7 @@ const NAV: { href: string; label: string; icon: IconName; section: string; admin
   { href: '/delivery',    label: 'Workers',          icon: 'workers',      section: 'Management' },
   { href: '/credentials', label: 'Credentials',      icon: 'credentials',  section: 'Management' },
   { href: '/history',     label: 'History',          icon: 'history',      section: 'System' },
-  { href: '/settings',    label: 'Settings',         icon: 'settings',     section: 'System' },
+  { href: '/settings',    label: 'Settings',         icon: 'settings',     section: 'System',  adminOnly: true },
   { href: '/worker',      label: 'Worker Portal',    icon: 'workers',      section: 'System' },
   { href: '/admin',       label: 'Worker Accounts',  icon: 'shield',       section: 'Admin', adminOnly: true },
 ];

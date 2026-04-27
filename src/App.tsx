@@ -108,7 +108,7 @@ function AppRoutes() {
           <Route path="/history" element={<History />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/earnings" element={<Earnings />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings" element={<Navigate to="/" replace />} />
           <Route path="/worker" element={<WorkerPortal />} />
           <Route path="/admin" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />

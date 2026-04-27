@@ -425,7 +425,7 @@ export const useVaultStore = create<VaultStore>()(
               deliveryMen = deliveryMen.map((d) =>
                 d.id === workerId ? { ...d, status: 'busy' as const } : d
               );
-            } else if (status === 'delivered' || status === 'done') {
+            } else if (status === 'delivered' || status === 'waiting_payment' || status === 'done') {
               deliveryMen = deliveryMen.map((d) =>
                 d.id === workerId ? { ...d, status: 'available' as const } : d
               );

@@ -10,7 +10,7 @@ const WALLET_ADJ  = '__wallet_adj__';
 interface DistRow {
   id: string;
   workerId: string;
-  pct: string;    // percentage of distTotal
+  pct: string;    // percentage of workerBase (distTotal minus fee)
   amount: string; // fixed dollar amount
 }
 
@@ -155,6 +155,7 @@ export default function Earnings() {
   const hasFeeConfigured  = (walletFeePct || 0) > 0 || (walletFeeAmt || 0) > 0;
   const distFeeValue      = distTotal * ((walletFeePct || 0) / 100) + (walletFeeAmt || 0);
   const effectiveFee      = applyDistFee && hasFeeConfigured ? distFeeValue : 0;
+  const workerBase        = distTotal - effectiveFee;
 
   function computeWorkerShare(row: DistRow, base: number): number {
     const p = parseFloat(row.pct) || 0;
@@ -162,9 +163,9 @@ export default function Earnings() {
     return (base > 0 ? base * (p / 100) : 0) + a;
   }
 
-  const allocated     = distRows.reduce((a, r) => a + computeWorkerShare(r, distTotal), 0);
-  const unallocated   = distTotal - allocated;
-  const workerAmtOver = allocated > distTotal + 0.001;
+  const allocated     = distRows.reduce((a, r) => a + computeWorkerShare(r, workerBase), 0);
+  const unallocated   = workerBase - allocated;
+  const workerAmtOver = allocated > workerBase + 0.001;
 
   function addDistRow() {
     setDistRows((prev) => [...prev, { id: uid(), workerId: '', pct: '', amount: '' }]);
@@ -182,14 +183,14 @@ export default function Earnings() {
     if (!distWalletId && wallets.length > 0) { alert('Select a source wallet before distributing.'); return; }
     if (distTotal <= 0) { alert('Enter the amount to distribute first.'); return; }
     if (workerAmtOver) { alert('Worker amounts exceed the distribute total. Reduce them before confirming.'); return; }
-    const valid = distRows.filter((r) => r.workerId && computeWorkerShare(r, distTotal) > 0);
+    const valid = distRows.filter((r) => r.workerId && computeWorkerShare(r, workerBase) > 0);
     if (!valid.length) { alert('Add at least one worker with a valid share.'); return; }
     const date = new Date().toLocaleDateString();
     const note = distNote.trim() || `Distribution ${date}`;
     addPayouts(valid.map((r) => ({
       workerId: r.workerId,
       walletId: distWalletId || undefined,
-      amount:   computeWorkerShare(r, distTotal),
+      amount:   computeWorkerShare(r, workerBase),
       type:     'debit' as const,
       status:   'pending' as const,
       note,
@@ -712,7 +713,7 @@ export default function Earnings() {
                   <div className="dist-step-label">Assign shares to workers</div>
                   <div style={{ fontSize: 11, color: 'var(--text-hint)', marginBottom: 6 }}>Each worker can receive a % of the total <em>and/or</em> a fixed $ amount.</div>
                   {distRows.map((row) => {
-                    const computed = computeWorkerShare(row, distTotal);
+                    const computed = computeWorkerShare(row, workerBase);
                     const hasValue = computed > 0;
                     return (
                       <div key={row.id} className="dist-worker-row">

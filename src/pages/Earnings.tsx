@@ -58,6 +58,7 @@ export default function Earnings() {
   const [distRows,      setDistRows]      = useState<DistRow[]>([]);
   const [distWalletId,  setDistWalletId]  = useState('');
   const [applyDistFee,  setApplyDistFee]  = useState(true);
+  const [feeMode,       setFeeMode]       = useState<'from_workers' | 'on_top'>('from_workers');
 
   // Wallet adjustment state
   const [poolAmount, setPoolAmount] = useState('');
@@ -155,7 +156,9 @@ export default function Earnings() {
   const hasFeeConfigured  = (walletFeePct || 0) > 0 || (walletFeeAmt || 0) > 0;
   const distFeeValue      = distTotal * ((walletFeePct || 0) / 100) + (walletFeeAmt || 0);
   const effectiveFee      = applyDistFee && hasFeeConfigured ? distFeeValue : 0;
-  const workerBase        = distTotal - effectiveFee;
+  // 'from_workers': fee is deducted from the pool first, workers share the remainder
+  // 'on_top': workers share the full distTotal, fee is charged separately on top
+  const workerBase        = effectiveFee > 0 && feeMode === 'from_workers' ? distTotal - effectiveFee : distTotal;
 
   function computeWorkerShare(row: DistRow, base: number): number {
     const p = parseFloat(row.pct) || 0;
@@ -204,7 +207,7 @@ export default function Earnings() {
         note:     `Distribution fee — ${note}`,
       });
     }
-    setDistAmount(''); setDistNote(''); setDistRows([]); setDistWalletId(''); setApplyDistFee(true);
+    setDistAmount(''); setDistNote(''); setDistRows([]); setDistWalletId(''); setApplyDistFee(true); setFeeMode('from_workers');
   }
 
   function handleWalletAdjust(walletId: string, type: 'credit' | 'debit') {
@@ -786,6 +789,32 @@ export default function Earnings() {
                         {' '}= <span style={{ color: 'var(--orange)', fontWeight: 700 }}>{fmt(distFeeValue)} $</span>
                       </span>
                     </label>
+                    {applyDistFee && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8, marginLeft: 23 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
+                          <input
+                            type="radio"
+                            name="feeMode"
+                            value="from_workers"
+                            checked={feeMode === 'from_workers'}
+                            onChange={() => setFeeMode('from_workers')}
+                          />
+                          <span>Deduct from workers' shares</span>
+                          <span style={{ color: 'var(--text-hint)' }}>(workers split {fmt(distTotal - distFeeValue)} $)</span>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 12 }}>
+                          <input
+                            type="radio"
+                            name="feeMode"
+                            value="on_top"
+                            checked={feeMode === 'on_top'}
+                            onChange={() => setFeeMode('on_top')}
+                          />
+                          <span>Charge on top</span>
+                          <span style={{ color: 'var(--text-hint)' }}>(workers split {fmt(distTotal)} $, fee extra)</span>
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -808,9 +837,23 @@ export default function Earnings() {
                         ) : null;
                       })()}
                       <div className="dist-summary-item">
-                        <span className="dist-summary-label">Distributing</span>
+                        <span className="dist-summary-label">Total</span>
                         <span className="dist-summary-value" style={{ color: 'var(--orange)' }}>{fmt(distTotal)} $</span>
                       </div>
+                      {effectiveFee > 0 && (
+                        <div className="dist-summary-item">
+                          <span className="dist-summary-label">Distribution Fee</span>
+                          <span className="dist-summary-value" style={{ color: 'var(--orange)' }}>
+                            −{fmt(effectiveFee)} $ {feeMode === 'from_workers' ? '(from pool)' : '(on top)'}
+                          </span>
+                        </div>
+                      )}
+                      {effectiveFee > 0 && feeMode === 'from_workers' && (
+                        <div className="dist-summary-item">
+                          <span className="dist-summary-label">Workers Split</span>
+                          <span className="dist-summary-value" style={{ color: 'var(--text-muted)' }}>{fmt(workerBase)} $</span>
+                        </div>
+                      )}
                       <div className="dist-summary-item">
                         <span className="dist-summary-label">Allocated</span>
                         <span className="dist-summary-value" style={{ color: workerAmtOver ? 'var(--red)' : 'var(--green)' }}>{fmt(allocated)} $</span>
@@ -819,12 +862,6 @@ export default function Earnings() {
                         <span className="dist-summary-label">Unallocated</span>
                         <span className="dist-summary-value" style={{ color: unallocated >= 0 ? 'var(--text-muted)' : 'var(--red)' }}>{fmt(Math.abs(unallocated))} $</span>
                       </div>
-                      {effectiveFee > 0 && (
-                        <div className="dist-summary-item">
-                          <span className="dist-summary-label">Distribution Fee</span>
-                          <span className="dist-summary-value" style={{ color: 'var(--orange)' }}>−{fmt(effectiveFee)} $</span>
-                        </div>
-                      )}
                     </div>
                     {workerAmtOver && (
                       <div style={{ marginTop: 8, fontSize: 12, color: 'var(--red)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>

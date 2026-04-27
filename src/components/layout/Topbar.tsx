@@ -19,7 +19,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
     <div className="topbar">
       <button className="menu-btn" onClick={onMenuClick} aria-label="Open menu">☰</button>
       <div className="brand">
-        <img src="/logo.png" alt="Instant-Play" className="brand-logo" />
+        <img src="/logo.png?v=2" alt="Instant-Play" className="brand-logo" />
         <span className="brand-name">Instant-Play</span>
       </div>
       <div className="topbar-right">

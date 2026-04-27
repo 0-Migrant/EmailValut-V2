@@ -4,7 +4,7 @@ import { fmt, fmtDateTime, orderTotal, getPriceInfo, statusLabel } from './utils
 
 async function loadLogoBase64(): Promise<string | null> {
   try {
-    const res = await fetch('/logo.png');
+    const res = await fetch('/logo-v2.png');
     const blob = await res.blob();
     return await new Promise((resolve) => {
       const reader = new FileReader();

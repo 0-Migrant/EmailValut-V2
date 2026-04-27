@@ -51,6 +51,7 @@ export interface Order {
   id: string;
   deliveryManId: string;
   customerId: string;
+  gameId?: string;
   items: OrderItem[];
   status: OrderStatus;
   customPrice: number | null;

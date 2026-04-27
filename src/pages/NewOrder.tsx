@@ -22,6 +22,7 @@ export default function NewOrder() {
 
   const [dmId,           setDmId]           = useState('');
   const [customerId,     setCustomerId]     = useState('');
+  const [gameId,         setGameId]         = useState('');
   const [orderItems,     setOrderItems]     = useState<OrderItem[]>([]);
   const [customPrice,    setCustomPrice]    = useState('');
   const [discountPctStr, setDiscountPctStr] = useState('');
@@ -169,7 +170,7 @@ export default function NewOrder() {
     const prevCount = customerId ? orders.filter((o) => o.customerId === customerId).length : 0;
 
     const selectedPm = (settings.paymentMethods ?? []).find((m) => m.id === paymentMethodId);
-    addOrder({ deliveryManId: dmId, customerId, items: validItems, status: 'waiting', customPrice: cp2, discountPct: dp2, paymentMethod: selectedPm?.label ?? '', paymentDetail: selectedPm?.detail ?? '', source });
+    addOrder({ deliveryManId: dmId, customerId, gameId: gameId.trim() || undefined, items: validItems, status: 'waiting', customPrice: cp2, discountPct: dp2, paymentMethod: selectedPm?.label ?? '', paymentDetail: selectedPm?.detail ?? '', source });
 
     // Decrement stock for every consumed stock item
     validItems.forEach((oi) => {
@@ -206,76 +207,91 @@ export default function NewOrder() {
         <div className="card">
           <div className="card-title">Delivery Details</div>
           <div className="new-order-fields">
-            <div className="field">
-              <label>Worker</label>
-              <select className="inp" value={dmId} onChange={(e) => setDmId(e.target.value)}>
-                <option value="">— Select worker —</option>
-                {deliveryMen.map((d) => {
-                  const available = !d.frozen && d.status === 'available';
-                  const statusText = d.frozen ? 'Frozen' : (d.status === 'busy' ? 'Busy' : d.status === 'offline' ? 'Offline' : null);
-                  return (
-                    <option key={d.id} value={d.id} disabled={!available}>
-                      {d.name}{statusText ? ` — ${statusText}` : ''}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div className="field">
-              <label>Customer ID <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional — loyalty tracking)</span></label>
-              <div ref={customerRef} style={{ position: 'relative' }}>
-                <input
-                  className="inp"
-                  value={customerId}
-                  onChange={(e) => { setCustomerId(e.target.value); setShowSuggestions(true); }}
-                  onFocus={() => setShowSuggestions(true)}
-                  placeholder="Type to search clients..."
-                  autoComplete="off"
-                />
-                {showSuggestions && suggestions.length > 0 && (
-                  <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
-                    backgroundColor: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-                    maxHeight: 220, overflowY: 'auto', marginTop: 2,
-                  }}>
-                    {suggestions.map((c) => (
-                      <div
-                        key={c.id}
-                        onMouseDown={(e) => { e.preventDefault(); setCustomerId(c.name); setShowSuggestions(false); }}
-                        style={{
-                          padding: '9px 12px', cursor: 'pointer', fontSize: 13,
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          backgroundColor: 'transparent',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                      >
-                        <span style={{ fontWeight: 600 }}>{c.name}</span>
-                        {c.note && <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>{c.note}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {/* Left: Worker, Payment Method, Order Source */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Worker</label>
+                <select className="inp" value={dmId} onChange={(e) => setDmId(e.target.value)}>
+                  <option value="">— Select worker —</option>
+                  {deliveryMen.map((d) => {
+                    const available = !d.frozen && d.status === 'available';
+                    const statusText = d.frozen ? 'Frozen' : (d.status === 'busy' ? 'Busy' : d.status === 'offline' ? 'Offline' : null);
+                    return (
+                      <option key={d.id} value={d.id} disabled={!available}>
+                        {d.name}{statusText ? ` — ${statusText}` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Payment Method <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
+                <select className="inp" value={paymentMethodId} onChange={(e) => setPaymentMethodId(e.target.value)}>
+                  <option value="">— Select method —</option>
+                  {(settings.paymentMethods ?? []).map((m) => (
+                    <option key={m.id} value={m.id}>{m.label}{m.detail ? ` — ${m.detail}` : ''}</option>
+                  ))}
+                </select>
+                {paymentMethodId && (() => { const pm = (settings.paymentMethods ?? []).find((m) => m.id === paymentMethodId); return pm?.detail ? <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 3 }}>{pm.detail}</div> : null; })()}
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Order Source <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
+                <select className="inp" value={source} onChange={(e) => setSource(e.target.value)}>
+                  <option value="">— Select source —</option>
+                  {(settings.platforms ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
               </div>
             </div>
-            <div className="field">
-              <label>Payment Method <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
-              <select className="inp" value={paymentMethodId} onChange={(e) => setPaymentMethodId(e.target.value)}>
-                <option value="">— Select method —</option>
-                {(settings.paymentMethods ?? []).map((m) => (
-                  <option key={m.id} value={m.id}>{m.label}{m.detail ? ` — ${m.detail}` : ''}</option>
-                ))}
-              </select>
-              {paymentMethodId && (() => { const pm = (settings.paymentMethods ?? []).find((m) => m.id === paymentMethodId); return pm?.detail ? <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 3 }}>{pm.detail}</div> : null; })()}
-            </div>
-            <div className="field">
-              <label>Order Source <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
-              <select className="inp" value={source} onChange={(e) => setSource(e.target.value)}>
-                <option value="">— Select source —</option>
-                {(settings.platforms ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
+            {/* Right: Customer, Game ID */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Customer <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional — loyalty tracking)</span></label>
+                <div ref={customerRef} style={{ position: 'relative' }}>
+                  <input
+                    className="inp"
+                    value={customerId}
+                    onChange={(e) => { setCustomerId(e.target.value); setShowSuggestions(true); }}
+                    onFocus={() => setShowSuggestions(true)}
+                    placeholder="Type to search clients..."
+                    autoComplete="off"
+                  />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                      maxHeight: 220, overflowY: 'auto', marginTop: 2,
+                    }}>
+                      {suggestions.map((c) => (
+                        <div
+                          key={c.id}
+                          onMouseDown={(e) => { e.preventDefault(); setCustomerId(c.name); setShowSuggestions(false); }}
+                          style={{
+                            padding: '9px 12px', cursor: 'pointer', fontSize: 13,
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            backgroundColor: 'transparent',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <span style={{ fontWeight: 600 }}>{c.name}</span>
+                          {c.note && <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>{c.note}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Game ID <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
+                <input
+                  className="inp"
+                  value={gameId}
+                  onChange={(e) => setGameId(e.target.value)}
+                  placeholder="Enter game ID..."
+                />
+              </div>
             </div>
           </div>
         </div>

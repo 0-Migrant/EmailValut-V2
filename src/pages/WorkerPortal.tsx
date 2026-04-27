@@ -237,6 +237,11 @@ export default function WorkerPortal() {
                             Customer: <strong style={{ color: 'var(--text-main)' }}>{o.customerId}</strong>
                           </div>
                         )}
+                        {o.gameId && (
+                          <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)' }}>
+                            Game ID: <strong style={{ color: 'var(--text-main)' }}>{o.gameId}</strong>
+                          </div>
+                        )}
                         {o.paymentMethod && (
                           <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)' }}>
                             Payment: <strong style={{ color: 'var(--text-main)' }}>{o.paymentMethod}</strong>

@@ -20,6 +20,8 @@ export default function OrderDetailModal() {
   const [editingSource,   setEditingSource]   = useState(false);
   const [editingCustomer,  setEditingCustomer]  = useState(false);
   const [customerDraft,    setCustomerDraft]    = useState('');
+  const [editingGameId,    setEditingGameId]    = useState(false);
+  const [gameIdDraft,      setGameIdDraft]      = useState('');
   const [pdfTemplate,     setPdfTemplate]     = useState<'standard' | 'golden' | 'vip'>('standard');
   const [vipImage,       setVipImage]       = useState<string | null>(null);
 
@@ -102,6 +104,36 @@ export default function OrderDetailModal() {
                     setCustomerDraft(order.customerId ?? '');
                     setEditingCustomer(true);
                   }}
+                ><Icon name="edit" size={11} /></button>
+              </div>
+            )}
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Game ID</div>
+            {editingGameId ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  className="inp"
+                  value={gameIdDraft}
+                  autoFocus
+                  placeholder="Enter game ID..."
+                  style={{ padding: '2px 6px', fontSize: 13 }}
+                  onChange={(e) => setGameIdDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { updateOrder(order.id, { gameId: gameIdDraft.trim() || undefined }); setEditingGameId(false); }
+                    if (e.key === 'Escape') setEditingGameId(false);
+                  }}
+                />
+                <button className="btn btn-ghost btn-xs" onClick={() => { updateOrder(order.id, { gameId: gameIdDraft.trim() || undefined }); setEditingGameId(false); }}><Icon name="check" size={11} /></button>
+                <button className="btn btn-ghost btn-xs" onClick={() => setEditingGameId(false)}><Icon name="x" size={11} /></button>
+              </div>
+            ) : (
+              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {order.gameId || '—'}
+                <button
+                  className="btn btn-ghost btn-xs"
+                  title="Edit Game ID"
+                  onClick={() => { setGameIdDraft(order.gameId ?? ''); setEditingGameId(true); }}
                 ><Icon name="edit" size={11} /></button>
               </div>
             )}

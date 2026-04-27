@@ -416,8 +416,25 @@ export const useVaultStore = create<VaultStore>()(
               clients = [...clients, { id: uid(), name, createdAt: new Date().toISOString() }];
             }
           }
+
+          // Auto-manage worker availability based on order status
+          let deliveryMen = s.deliveryMen;
+          const workerId = order?.deliveryManId;
+          if (workerId) {
+            if (status === 'accepted') {
+              deliveryMen = deliveryMen.map((d) =>
+                d.id === workerId ? { ...d, status: 'busy' as const } : d
+              );
+            } else if (status === 'delivered' || status === 'done') {
+              deliveryMen = deliveryMen.map((d) =>
+                d.id === workerId ? { ...d, status: 'available' as const } : d
+              );
+            }
+          }
+
           return {
             orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)),
+            deliveryMen,
             clients,
             history: pushHistory(s, 'edit', `Order ${id.slice(-5)} → ${status}`),
           };

@@ -29,6 +29,31 @@ import WorkerPortal from './pages/WorkerPortal';
 import AdminWorkers from './pages/AdminWorkers';
 import LoginPage from './pages/LoginPage';
 
+function AppLoader() {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 20, background: 'var(--bg-page)',
+    }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: 16, background: 'var(--accent)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 4px 24px rgba(24,95,165,.30)',
+      }}>
+        <img src="/logo.png?v=2" alt="" style={{ width: 42, height: 42, objectFit: 'contain' }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.3px' }}>Instant-Play</div>
+      <div style={{
+        width: 32, height: 32, borderRadius: '50%',
+        border: '3px solid var(--border)', borderTopColor: 'var(--accent)',
+        animation: 'spin .7s linear infinite',
+      }} />
+    </div>
+  );
+}
+
 function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pruneHistory = useVaultStore((s) => s.pruneHistory);
@@ -77,14 +102,7 @@ function AppRoutes() {
 
   // Wait for store hydration before rendering — avoids false logout while
   // deliveryMen is still empty during async Supabase hydration.
-  if (!storeReady) return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--bg-page)',
-    }}>
-      <div style={{ width: 32, height: 32, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-    </div>
-  );
+  if (!storeReady) return <AppLoader />;
 
   // No session → login page for every route
   if (!session) {

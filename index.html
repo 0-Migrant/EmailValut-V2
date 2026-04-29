@@ -5,9 +5,82 @@
     <link rel="icon" type="image/png" href="/logo.png?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Instant-Play</title>
+    <style>
+      #app-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #f4f5f7;
+        font-family: system-ui, -apple-system, sans-serif;
+        z-index: 9999;
+      }
+      body.dark #app-loader {
+        background: #0f1117;
+      }
+      .loader-logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: #185FA5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 24px rgba(24,95,165,.30);
+      }
+      .loader-logo img {
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+      }
+      .loader-name {
+        font-size: 20px;
+        font-weight: 700;
+        color: #111;
+        letter-spacing: -.3px;
+      }
+      body.dark .loader-name {
+        color: #e8eaf0;
+      }
+      .loader-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e5e7eb;
+        border-top-color: #185FA5;
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+      }
+      body.dark .loader-spinner {
+        border-color: #2e3347;
+        border-top-color: #185FA5;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <script>
+      try {
+        var vs = localStorage.getItem('vault_state');
+        if (vs) {
+          var parsed = JSON.parse(vs);
+          if (parsed && parsed.state && parsed.state.settings && parsed.state.settings.theme === 'dark') {
+            document.body.classList.add('dark');
+          }
+        }
+      } catch(e) {}
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-loader">
+        <div class="loader-logo">
+          <img src="/logo.png?v=2" alt="" onerror="this.style.display='none'" />
+        </div>
+        <div class="loader-name">Instant-Play</div>
+        <div class="loader-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

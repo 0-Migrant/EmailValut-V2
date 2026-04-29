@@ -5,7 +5,6 @@ import { statusLabel, statusBadgeClass, fmt, fmtDateTime, orderTotal } from '@/l
 import type { WorkerStatus, OrderStatus } from '@/lib/types';
 import Icon from '@/components/Icon';
 import StatusPicker from '@/components/StatusPicker';
-import { supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 
 const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'waiting',          label: 'Waiting' },
@@ -30,14 +29,13 @@ export default function WorkerPortal() {
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Mark worker offline when tab or browser is closed
+  // Sync offline status to localStorage when the tab closes so this device's
+  // next load shows the correct state. Cross-browser notification is handled by
+  // PresenceManager in App.tsx via Supabase Realtime.
   useEffect(() => {
     if (!workerId) return;
 
     const handleBeforeUnload = () => {
-      setWorkerStatus(workerId, 'offline');
-
-      // Synchronously patch localStorage so the next load reflects the change
       try {
         const raw = window.localStorage.getItem('vault_state');
         if (raw) {
@@ -46,23 +44,7 @@ export default function WorkerPortal() {
             parsed.state.deliveryMen = parsed.state.deliveryMen.map((d: { id: string }) =>
               d.id === workerId ? { ...d, status: 'offline' } : d,
             );
-            const serialized = JSON.stringify(parsed);
-            window.localStorage.setItem('vault_state', serialized);
-
-            // Best-effort keepalive fetch so other sessions see offline immediately
-            if (supabaseUrl && supabaseAnonKey) {
-              fetch(`${supabaseUrl}/rest/v1/vault?id=eq.1`, {
-                method: 'PATCH',
-                keepalive: true,
-                headers: {
-                  'Content-Type': 'application/json',
-                  apikey: supabaseAnonKey,
-                  Authorization: `Bearer ${supabaseAnonKey}`,
-                  Prefer: 'return=minimal',
-                },
-                body: JSON.stringify({ data: parsed.state }),
-              }).catch(() => {});
-            }
+            window.localStorage.setItem('vault_state', JSON.stringify(parsed));
           }
         }
       } catch {}
@@ -70,7 +52,7 @@ export default function WorkerPortal() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [workerId, setWorkerStatus]);
+  }, [workerId]);
 
   function toggleExpand(id: string) {
     setExpanded((prev) => {

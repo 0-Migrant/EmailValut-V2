@@ -170,6 +170,37 @@ function AppRoutes() {
   );
 }
 
+// Tracks worker presence via Supabase Realtime. When a worker's WebSocket drops
+// (tab/browser closed), the Supabase server fires a 'leave' event to all other
+// subscribers, which marks the worker offline immediately — no beforeunload needed.
+function PresenceManager() {
+  const { session } = useAuth();
+  const workerId = session?.type === 'worker' ? session.workerId : null;
+
+  useEffect(() => {
+    if (!isSupabaseEnabled || !supabase) return;
+
+    const ch = supabase.channel('workers-online');
+
+    ch.on('presence', { event: 'leave' }, ({ leftPresences }) => {
+      const { setWorkerStatus } = useVaultStore.getState();
+      (leftPresences as Array<{ workerId?: string }>).forEach((p) => {
+        if (p.workerId) setWorkerStatus(p.workerId, 'offline');
+      });
+    });
+
+    ch.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED' && workerId) {
+        await ch.track({ workerId });
+      }
+    });
+
+    return () => { supabase!.removeChannel(ch); };
+  }, [workerId]);
+
+  return null;
+}
+
 function App() {
   useEffect(() => {
     refreshFromSupabase();
@@ -178,6 +209,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <PresenceManager />
         <Helmet>
           <title>Instant-Play</title>
           <meta name="description" content="Secure email credentials and order management system" />

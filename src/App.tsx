@@ -43,7 +43,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     const channel = supabase!
       .channel('vault-broadcast')
       .on('broadcast', { event: 'data_updated' }, () => {
-        useVaultStore.persist.rehydrate();
+        refreshFromSupabase();
       })
       .subscribe();
 

@@ -11,18 +11,20 @@ interface FormPopupProps {
   initialName: string;
   initialNote: string;
   initialSpecial: boolean;
-  onSave: (name: string, note: string, isSpecial: boolean) => void;
+  initialBlacklisted: boolean;
+  onSave: (name: string, note: string, isSpecial: boolean, isBlacklisted: boolean) => void;
   onClose: () => void;
 }
 
-function ClientFormPopup({ editId, initialName, initialNote, initialSpecial, onSave, onClose }: FormPopupProps) {
-  const [name,      setName]      = useState(initialName);
-  const [note,      setNote]      = useState(initialNote);
-  const [isSpecial, setIsSpecial] = useState(initialSpecial);
+function ClientFormPopup({ editId, initialName, initialNote, initialSpecial, initialBlacklisted, onSave, onClose }: FormPopupProps) {
+  const [name,           setName]           = useState(initialName);
+  const [note,           setNote]           = useState(initialNote);
+  const [isSpecial,      setIsSpecial]      = useState(initialSpecial);
+  const [isBlacklisted,  setIsBlacklisted]  = useState(initialBlacklisted);
 
   function submit() {
     if (!name.trim()) { alert('Client name is required'); return; }
-    onSave(name.trim(), note.trim(), isSpecial);
+    onSave(name.trim(), note.trim(), isSpecial, isBlacklisted);
   }
 
   return (
@@ -75,6 +77,23 @@ function ClientFormPopup({ editId, initialName, initialNote, initialSpecial, onS
               </div>
             </span>
           </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+            padding: '10px 12px', borderRadius: 8, border: `1px solid ${isBlacklisted ? '#ef4444' : 'var(--border)'}`,
+            background: isBlacklisted ? 'rgba(239,68,68,0.08)' : 'transparent', userSelect: 'none',
+          }}>
+            <input
+              type="checkbox"
+              checked={isBlacklisted}
+              onChange={(e) => setIsBlacklisted(e.target.checked)}
+            />
+            <span>
+              <span style={{ fontWeight: 600, color: isBlacklisted ? '#ef4444' : 'var(--text)' }}>🚫 Blacklisted</span>
+              <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 2 }}>
+                New orders for this client will require confirmation
+              </div>
+            </span>
+          </label>
         </div>
 
         <div className="modal-actions" style={{ marginTop: 20 }}>
@@ -100,14 +119,15 @@ export default function Clients() {
   const settings                 = useVaultStore((s) => s.settings);
   const { showConfirm } = useModal();
 
-  const [popupOpen,   setPopupOpen]   = useState(false);
-  const [editId,      setEditId]      = useState<string | null>(null);
-  const [editName,    setEditName]    = useState('');
-  const [editNote,    setEditNote]    = useState('');
-  const [editSpecial, setEditSpecial] = useState(false);
-  const [search,      setSearch]      = useState('');
-  const [tierFilter,  setTierFilter]  = useState<string>('all');
-  const [syncMsg,     setSyncMsg]     = useState('');
+  const [popupOpen,        setPopupOpen]        = useState(false);
+  const [editId,           setEditId]           = useState<string | null>(null);
+  const [editName,         setEditName]         = useState('');
+  const [editNote,         setEditNote]         = useState('');
+  const [editSpecial,      setEditSpecial]      = useState(false);
+  const [editBlacklisted,  setEditBlacklisted]  = useState(false);
+  const [search,           setSearch]           = useState('');
+  const [tierFilter,       setTierFilter]       = useState<string>('all');
+  const [syncMsg,          setSyncMsg]          = useState('');
 
   // Auto-sync on first mount
   useEffect(() => {
@@ -115,28 +135,34 @@ export default function Clients() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openAdd() {
-    setEditId(null); setEditName(''); setEditNote(''); setEditSpecial(false);
+    setEditId(null); setEditName(''); setEditNote(''); setEditSpecial(false); setEditBlacklisted(false);
     setPopupOpen(true);
   }
 
   function openEdit(id: string) {
     const c = clients.find((x) => x.id === id);
     if (!c) return;
-    setEditId(id); setEditName(c.name); setEditNote(c.note ?? ''); setEditSpecial(c.isSpecial ?? false);
+    setEditId(id); setEditName(c.name); setEditNote(c.note ?? ''); setEditSpecial(c.isSpecial ?? false); setEditBlacklisted(c.isBlacklisted ?? false);
     setPopupOpen(true);
   }
 
-  function handleSave(name: string, note: string, isSpecial: boolean) {
+  function handleSave(name: string, note: string, isSpecial: boolean, isBlacklisted: boolean) {
     const duplicate = clients.some(
       (c) => c.name.toLowerCase() === name.toLowerCase() && c.id !== editId
     );
     if (duplicate) { alert('A client with that name already exists'); return; }
     if (editId) {
-      updateClient(editId, { name, note: note || undefined, isSpecial });
+      updateClient(editId, { name, note: note || undefined, isSpecial, isBlacklisted });
     } else {
-      addClient({ name, note: note || undefined, isSpecial });
+      addClient({ name, note: note || undefined, isSpecial, isBlacklisted });
     }
     setPopupOpen(false);
+  }
+
+  function toggleBlacklist(id: string) {
+    const c = clients.find((x) => x.id === id);
+    if (!c) return;
+    updateClient(id, { isBlacklisted: !c.isBlacklisted });
   }
 
   function handleDelete(id: string) {
@@ -165,7 +191,7 @@ export default function Clients() {
     const q = search.toLowerCase();
     const matchQ = !q || c.name.toLowerCase().includes(q) || (c.note ?? '').toLowerCase().includes(q);
     const matchT = tierFilter === 'all'
-      || (tierFilter === 'special' ? c.isSpecial : c.tier.label === tierFilter);
+      || (tierFilter === 'special' ? c.isSpecial : tierFilter === 'blacklisted' ? c.isBlacklisted : c.tier.label === tierFilter);
     return matchQ && matchT;
   });
 
@@ -199,7 +225,7 @@ export default function Clients() {
     }
   }
 
-  const tierLabels = ['all', 'special', ...LOYALTY_TIERS.map((t) => t.label)];
+  const tierLabels = ['all', 'special', 'blacklisted', ...LOYALTY_TIERS.map((t) => t.label)];
 
   return (
     <>
@@ -209,6 +235,7 @@ export default function Clients() {
           initialName={editName}
           initialNote={editNote}
           initialSpecial={editSpecial}
+          initialBlacklisted={editBlacklisted}
           onSave={handleSave}
           onClose={() => setPopupOpen(false)}
         />
@@ -254,6 +281,8 @@ export default function Clients() {
           {tierLabels.map((t) => {
             const tier = LOYALTY_TIERS.find((x) => x.label === t);
             const active = tierFilter === t;
+            const isBlacklistedTab = t === 'blacklisted';
+            const blacklistedCount = enriched.filter((c) => c.isBlacklisted).length;
             return (
               <button
                 key={t}
@@ -262,15 +291,15 @@ export default function Clients() {
                   padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', border: 'none',
                   fontWeight: active ? 700 : 400,
                   background: active
-                    ? (t === 'special' ? 'rgba(245,158,11,0.2)' : tier ? tier.bg : 'var(--accent-bg)')
+                    ? (isBlacklistedTab ? 'rgba(239,68,68,0.2)' : t === 'special' ? 'rgba(245,158,11,0.2)' : tier ? tier.bg : 'var(--accent-bg)')
                     : 'var(--surface-alt, var(--border))',
                   color: active
-                    ? (t === 'special' ? '#f59e0b' : tier ? tier.color : 'var(--accent)')
+                    ? (isBlacklistedTab ? '#ef4444' : t === 'special' ? '#f59e0b' : tier ? tier.color : 'var(--accent)')
                     : 'var(--text-muted)',
-                  outline: active ? `1px solid ${t === 'special' ? '#f59e0b' : tier?.color ?? 'var(--accent)'}` : 'none',
+                  outline: active ? `1px solid ${isBlacklistedTab ? '#ef4444' : t === 'special' ? '#f59e0b' : tier?.color ?? 'var(--accent)'}` : 'none',
                 }}
               >
-                {t === 'all' ? 'All' : t === 'special' ? '⭐ Special' : `${tier?.emoji} ${t}`}
+                {t === 'all' ? 'All' : isBlacklistedTab ? `🚫 Blacklisted${blacklistedCount > 0 ? ` (${blacklistedCount})` : ''}` : t === 'special' ? '⭐ Special' : `${tier?.emoji} ${t}`}
               </button>
             );
           })}
@@ -324,16 +353,22 @@ export default function Clients() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 12,
                       padding: '10px 14px', borderRadius: 8,
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderLeft: `4px solid ${c.isSpecial ? '#f59e0b' : c.tier.color}`,
+                      background: c.isBlacklisted ? 'rgba(239,68,68,0.05)' : 'var(--surface)',
+                      border: c.isBlacklisted ? '1px solid rgba(239,68,68,0.35)' : '1px solid var(--border)',
+                      borderLeft: `4px solid ${c.isBlacklisted ? '#ef4444' : c.isSpecial ? '#f59e0b' : c.tier.color}`,
                     }}
                   >
                     {/* Name + note */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                         {c.name}
-                        {c.isSpecial && (
+                        {c.isBlacklisted && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
+                            background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid #ef4444',
+                          }}>🚫 Blacklisted</span>
+                        )}
+                        {c.isSpecial && !c.isBlacklisted && (
                           <span style={{
                             fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
                             background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid #f59e0b',
@@ -368,6 +403,19 @@ export default function Clients() {
 
                     {/* Actions */}
                     <div className="action-group">
+                      <button
+                        className="btn btn-xs"
+                        title={c.isBlacklisted ? 'Remove from blacklist' : 'Add to blacklist'}
+                        onClick={() => toggleBlacklist(c.id)}
+                        style={{
+                          background: c.isBlacklisted ? 'rgba(239,68,68,0.15)' : 'transparent',
+                          border: `1px solid ${c.isBlacklisted ? '#ef4444' : 'var(--border)'}`,
+                          color: c.isBlacklisted ? '#ef4444' : 'var(--text-muted)',
+                          fontSize: 11,
+                        }}
+                      >
+                        {c.isBlacklisted ? '✓ Banned' : '🚫'}
+                      </button>
                       <button className="btn btn-ghost btn-xs" onClick={() => openEdit(c.id)}>
                         <Icon name="edit" size={11} />
                       </button>

@@ -139,6 +139,25 @@ export default function Settings() {
 
             <div className="setting-row">
               <div>
+                <div className="setting-label">Worker Offline Delay</div>
+                <div className="setting-desc">Seconds to wait after a worker disconnects before marking them offline. Prevents false offline on page refresh.</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  className="inp"
+                  type="number"
+                  min="0"
+                  max="120"
+                  style={{ width: 72 }}
+                  value={settings.workerOfflineDelay ?? 8}
+                  onChange={(e) => updateSettings({ workerOfflineDelay: Math.max(0, parseInt(e.target.value) || 0) })}
+                />
+                <span style={{ fontSize: 13, color: 'var(--text-hint)' }}>sec</span>
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
                 <div className="setting-label">Rows Per Page</div>
                 <div className="setting-desc">Default number of rows to show in tables</div>
               </div>

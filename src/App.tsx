@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 import ConfirmModal from './components/modals/ConfirmModal';
@@ -170,22 +170,43 @@ function AppRoutes() {
   );
 }
 
-// Tracks worker presence via Supabase Realtime. When a worker's WebSocket drops
-// (tab/browser closed), the Supabase server fires a 'leave' event to all other
-// subscribers, which marks the worker offline immediately — no beforeunload needed.
+// Tracks worker presence via Supabase Realtime. The Supabase server detects
+// dropped WebSocket connections and fires presence events to all subscribers.
+// A configurable grace period prevents a page refresh from triggering offline.
 function PresenceManager() {
   const { session } = useAuth();
   const workerId = session?.type === 'worker' ? session.workerId : null;
+  const delayMs = useVaultStore((s) => (s.settings.workerOfflineDelay ?? 8) * 1000);
+  const delayRef = useRef(delayMs);
+  delayRef.current = delayMs;
 
   useEffect(() => {
     if (!isSupabaseEnabled || !supabase) return;
 
+    const pending = new Map<string, ReturnType<typeof setTimeout>>();
+
     const ch = supabase.channel('workers-online');
 
+    // Worker reconnected within grace period — cancel the pending offline timer
+    ch.on('presence', { event: 'join' }, ({ newPresences }) => {
+      (newPresences as Array<{ workerId?: string }>).forEach((p) => {
+        if (p.workerId && pending.has(p.workerId)) {
+          clearTimeout(pending.get(p.workerId)!);
+          pending.delete(p.workerId);
+        }
+      });
+    });
+
+    // Worker disconnected — start grace period before marking offline
     ch.on('presence', { event: 'leave' }, ({ leftPresences }) => {
-      const { setWorkerStatus } = useVaultStore.getState();
       (leftPresences as Array<{ workerId?: string }>).forEach((p) => {
-        if (p.workerId) setWorkerStatus(p.workerId, 'offline');
+        if (!p.workerId) return;
+        const id = p.workerId;
+        if (pending.has(id)) clearTimeout(pending.get(id)!);
+        pending.set(id, setTimeout(() => {
+          useVaultStore.getState().setWorkerStatus(id, 'offline');
+          pending.delete(id);
+        }, delayRef.current));
       });
     });
 
@@ -195,7 +216,10 @@ function PresenceManager() {
       }
     });
 
-    return () => { supabase!.removeChannel(ch); };
+    return () => {
+      pending.forEach(clearTimeout);
+      supabase!.removeChannel(ch);
+    };
   }, [workerId]);
 
   return null;

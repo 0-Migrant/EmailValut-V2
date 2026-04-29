@@ -126,6 +126,7 @@ const DEFAULT_SETTINGS: Settings = {
   wallets: [],
   hideResourceAccounts: false,
   workerFullAccess: false,
+  workerOfflineDelay: 8,
 };
 
 // ─── Helper: add history entry ────────────────────────────────────────────────

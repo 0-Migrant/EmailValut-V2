@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt, isLoyaltyMilestone } from '@/lib/utils';
-import type { OrderItem } from '@/lib/types';
+import type { OrderItem, Client } from '@/lib/types';
 
 export default function NewOrder() {
   const navigate        = useNavigate();
-  const { showLoyalty } = useModal();
+  const { showLoyalty, showConfirm } = useModal();
   const storeItems    = useVaultStore((s) => s.items);
   const deliveryMen   = useVaultStore((s) => s.deliveryMen);
   const orders        = useVaultStore((s) => s.orders);
@@ -39,6 +39,10 @@ export default function NewOrder() {
         .sort((a, b) => a.name.localeCompare(b.name))
         .slice(0, 10)
     : [];
+
+  const blacklistedClient: Client | undefined = customerId.trim()
+    ? clients.find((c) => c.name.toLowerCase() === customerId.trim().toLowerCase() && c.isBlacklisted)
+    : undefined;
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -155,24 +159,15 @@ export default function NewOrder() {
     return orderItems.some((oi) => oi.credentialId === credId && oi.stockId === stockId);
   }
 
-  function submit() {
-    if (!dmId) { alert('Please select a worker.'); return; }
-    const selectedDm = deliveryMen.find((d) => d.id === dmId);
-    if (selectedDm && (selectedDm.frozen || selectedDm.status !== 'available')) {
-      alert('This worker is not available. Please select an available worker.');
-      return;
-    }
+  function placeOrder() {
     const validItems = orderItems.filter((oi) => oi.qty > 0);
-    if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
     const cp2 = customPrice !== '' && !isNaN(parseFloat(customPrice)) ? parseFloat(customPrice) : null;
     const dp2 = discountPctStr !== '' && !isNaN(parseFloat(discountPctStr)) ? parseFloat(discountPctStr) : null;
-    // Count BEFORE adding so we can check if this new order hits a milestone
     const prevCount = customerId ? orders.filter((o) => o.customerId === customerId).length : 0;
 
     const selectedPm = (settings.paymentMethods ?? []).find((m) => m.id === paymentMethodId);
     addOrder({ deliveryManId: dmId, customerId, gameId: gameId.trim() || undefined, items: validItems, status: 'waiting', customPrice: cp2, discountPct: dp2, paymentMethod: selectedPm?.label ?? '', paymentDetail: selectedPm?.detail ?? '', source });
 
-    // Decrement stock for every consumed stock item
     validItems.forEach((oi) => {
       if (oi.credentialId && oi.stockId) {
         consumeStock(oi.credentialId, oi.stockId, oi.qty);
@@ -187,6 +182,28 @@ export default function NewOrder() {
       }
     }
     navigate('/orders');
+  }
+
+  function submit() {
+    if (!dmId) { alert('Please select a worker.'); return; }
+    const selectedDm = deliveryMen.find((d) => d.id === dmId);
+    if (selectedDm && (selectedDm.frozen || selectedDm.status !== 'available')) {
+      alert('This worker is not available. Please select an available worker.');
+      return;
+    }
+    const validItems = orderItems.filter((oi) => oi.qty > 0);
+    if (!validItems.length) { alert('Please add at least one item with quantity > 0.'); return; }
+
+    if (blacklistedClient) {
+      showConfirm(
+        '🚫 Blacklisted Client',
+        `"${blacklistedClient.name}" is on the blacklist.${blacklistedClient.note ? `\n\nNote: ${blacklistedClient.note}` : ''}\n\nDo you still want to place this order?`,
+        placeOrder,
+      );
+      return;
+    }
+
+    placeOrder();
   }
 
   const cats = [...new Set(storeItems.map((i) => i.category || 'Other'))].sort();
@@ -254,6 +271,7 @@ export default function NewOrder() {
                     onFocus={() => setShowSuggestions(true)}
                     placeholder="Type to search clients..."
                     autoComplete="off"
+                    style={blacklistedClient ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px rgba(239,68,68,0.2)' } : undefined}
                   />
                   {showSuggestions && suggestions.length > 0 && (
                     <div style={{
@@ -270,18 +288,44 @@ export default function NewOrder() {
                           style={{
                             padding: '9px 12px', cursor: 'pointer', fontSize: 13,
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            backgroundColor: 'transparent',
+                            backgroundColor: c.isBlacklisted ? 'rgba(239,68,68,0.06)' : 'transparent',
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = c.isBlacklisted ? 'rgba(239,68,68,0.12)' : 'var(--bg-hover)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = c.isBlacklisted ? 'rgba(239,68,68,0.06)' : 'transparent')}
                         >
-                          <span style={{ fontWeight: 600 }}>{c.name}</span>
-                          {c.note && <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>{c.note}</span>}
+                          <span style={{ fontWeight: 600, color: c.isBlacklisted ? '#ef4444' : undefined }}>{c.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {c.isBlacklisted && (
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
+                                background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid #ef4444' }}>
+                                🚫 Blacklisted
+                              </span>
+                            )}
+                            {c.note && <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>{c.note}</span>}
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
+                {blacklistedClient && (
+                  <div style={{
+                    marginTop: 6, padding: '8px 12px', borderRadius: 6,
+                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.4)',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                  }}>
+                    <span style={{ fontSize: 16 }}>🚫</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 12, color: '#ef4444' }}>Blacklisted Client</div>
+                      {blacklistedClient.note && (
+                        <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 1 }}>{blacklistedClient.note}</div>
+                      )}
+                      <div style={{ fontSize: 11, color: '#ef4444', marginTop: 1, opacity: 0.8 }}>
+                        You will be asked to confirm before placing this order.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Game ID <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>

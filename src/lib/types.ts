@@ -5,6 +5,7 @@ export interface Client {
   name: string;
   note?: string;
   isSpecial?: boolean;
+  isBlacklisted?: boolean;
   createdAt: string;
 }
 
@@ -133,6 +134,7 @@ export interface Settings {
   wallets: Wallet[];
   hideResourceAccounts: boolean;
   workerFullAccess: boolean;
+  workerOfflineDelay?: number;
 }
 
 export interface BundleItem {

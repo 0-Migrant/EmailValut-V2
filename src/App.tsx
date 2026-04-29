@@ -8,7 +8,7 @@ import OrderDetailModal from './components/modals/OrderDetailModal';
 import LoyaltyModal from './components/modals/LoyaltyModal';
 import { ModalProvider } from './context/ModalContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useVaultStore } from './lib/store';
+import { useVaultStore, refreshFromSupabase } from './lib/store';
 import * as StoreModule from './lib/store';
 import { supabase, isSupabaseEnabled } from './lib/supabase';
 
@@ -77,7 +77,14 @@ function AppRoutes() {
 
   // Wait for store hydration before rendering — avoids false logout while
   // deliveryMen is still empty during async Supabase hydration.
-  if (!storeReady) return null;
+  if (!storeReady) return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'var(--bg-page)',
+    }}>
+      <div style={{ width: 32, height: 32, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+    </div>
+  );
 
   // No session → login page for every route
   if (!session) {
@@ -146,6 +153,10 @@ function AppRoutes() {
 }
 
 function App() {
+  useEffect(() => {
+    refreshFromSupabase();
+  }, []);
+
   return (
     <Router>
       <AuthProvider>

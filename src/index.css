@@ -743,3 +743,5 @@ body.dark .badge-payment-complete {
     grid-template-columns: 1fr 1fr
   }
 }
+
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -176,28 +176,11 @@ function debouncedSupabaseSave(value: string) {
 }
 
 const supabaseStorage: StateStorage = {
-  getItem: async (): Promise<string | null> => {
+  // Return localStorage immediately so hydration is instant, then background-sync
+  // from Supabase via refreshFromSupabase() called from App.tsx on mount.
+  getItem: (): string | null => {
     if (typeof window === 'undefined') return null;
-    try {
-      const { data, error } = await supabase!
-        .from('vault')
-        .select('data')
-        .eq('id', 1)
-        .single();
-
-      if (error) {
-        if (error.code !== 'PGRST116') {
-          console.warn('Supabase getItem failed, falling back to localStorage:', error);
-        }
-        // Fallback to localStorage
-        return window.localStorage.getItem('vault_state');
-      }
-
-      return JSON.stringify({ state: data?.data ?? null, version: 0 });
-    } catch (err) {
-      console.warn('Failed to fetch vault data from Supabase, falling back to localStorage:', err);
-      return window.localStorage.getItem('vault_state');
-    }
+    return window.localStorage.getItem('vault_state');
   },
   setItem: async (_name: string, value: string): Promise<void> => {
     if (typeof window === 'undefined') return;
@@ -752,3 +735,25 @@ export const useVaultStore = create<VaultStore>()(
     },
   ),
 );
+
+// Fetch the latest state from Supabase and rehydrate the store in the background.
+// Called once from App.tsx on mount so the initial render is never blocked.
+export async function refreshFromSupabase(): Promise<void> {
+  if (!isSupabaseEnabled || !supabase) return;
+  try {
+    const { data, error } = await supabase.from('vault').select('data').eq('id', 1).single();
+    if (error) {
+      if (error.code !== 'PGRST116') {
+        console.warn('Background Supabase refresh failed:', error);
+      }
+      return;
+    }
+    if (data?.data) {
+      const serialized = JSON.stringify({ state: data.data, version: 0 });
+      window.localStorage.setItem('vault_state', serialized);
+      await useVaultStore.persist.rehydrate();
+    }
+  } catch (err) {
+    console.warn('Background Supabase refresh error:', err);
+  }
+}

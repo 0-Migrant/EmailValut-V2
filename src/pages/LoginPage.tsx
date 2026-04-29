@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import Icon from '@/components/Icon';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, storeReady } = useAuth();
   const navigate   = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -13,6 +13,7 @@ export default function LoginPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!storeReady) return;
     setError('');
     setLoading(true);
     const result = login(username.trim(), password);
@@ -99,10 +100,10 @@ export default function LoginPage() {
             className="btn btn-primary"
             type="submit"
             style={{ marginTop: 4, height: 42 }}
-            disabled={loading}
+            disabled={loading || !storeReady}
           >
             <Icon name="login" size={15} style={{ marginRight: 8 }} />
-            Sign In
+            {!storeReady ? 'Loading...' : 'Sign In'}
           </button>
         </form>
       </div>

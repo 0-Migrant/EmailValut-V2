@@ -17,6 +17,7 @@ export type LoginResult =
 
 interface AuthCtx {
   session: Session | null;
+  storeReady: boolean;
   login: (username: string, password: string) => LoginResult;
   logout: () => void;
 }
@@ -32,6 +33,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
+
+  const [storeReady, setStoreReady] = useState(() => useVaultStore.persist.hasHydrated());
+
+  useEffect(() => {
+    if (storeReady) return;
+    const unsub = useVaultStore.persist.onFinishHydration(() => setStoreReady(true));
+    if (useVaultStore.persist.hasHydrated()) setStoreReady(true);
+    return unsub;
+  }, [storeReady]);
 
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
 
@@ -73,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, login, logout }}>
+    <AuthContext.Provider value={{ session, storeReady, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

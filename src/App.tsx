@@ -72,8 +72,12 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { session } = useAuth();
+  const { session, storeReady } = useAuth();
   const settings = useVaultStore((s) => s.settings);
+
+  // Wait for store hydration before rendering — avoids false logout while
+  // deliveryMen is still empty during async Supabase hydration.
+  if (!storeReady) return null;
 
   // No session → login page for every route
   if (!session) {

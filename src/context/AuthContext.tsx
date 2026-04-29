@@ -46,15 +46,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
 
   // Keep session valid — if the worker was deleted or frozen while logged in,
-  // evict the session on next render.
+  // evict the session on next render. Guard with storeReady so we don't evict
+  // while deliveryMen is still empty during async Supabase hydration.
   useEffect(() => {
+    if (!storeReady) return;
     if (session?.type === 'worker') {
       const worker = deliveryMen.find((d) => d.id === session.workerId);
       if (!worker || worker.frozen) {
         setSession(null);
       }
     }
-  }, [deliveryMen, session]);
+  }, [deliveryMen, session, storeReady]);
 
   useEffect(() => {
     if (session) {

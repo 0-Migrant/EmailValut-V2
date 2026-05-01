@@ -150,6 +150,7 @@ function pushHistory(
 // ─── Custom Server Storage ───────────────────────────────────────────────────
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+let _saveInFlight = false;
 let _hydrated = false;
 export let onSaveSuccess: (() => void) | null = null;
 
@@ -157,6 +158,8 @@ function debouncedSupabaseSave(value: string) {
   if (!_hydrated) return;
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async () => {
+    _saveTimer = null;
+    _saveInFlight = true;
     try {
       const { state } = JSON.parse(value);
       const { error } = await supabase!.from('vault').upsert({ id: 1, data: state });
@@ -172,6 +175,8 @@ function debouncedSupabaseSave(value: string) {
     } catch (err) {
       console.warn('Failed to save vault data to Supabase, falling back to localStorage:', err);
       window.localStorage.setItem('vault_state', value);
+    } finally {
+      _saveInFlight = false;
     }
   }, 1000);
 }
@@ -767,6 +772,9 @@ export async function flushSaveToSupabase(): Promise<void> {
 // Called once from App.tsx on mount so the initial render is never blocked.
 export async function refreshFromSupabase(): Promise<void> {
   if (!isSupabaseEnabled || !supabase) return;
+  // Don't overwrite local state while a save is pending or in-flight — refreshing
+  // with stale server data would cancel the pending save and silently lose local changes.
+  if (_saveTimer !== null || _saveInFlight) return;
   try {
     const { data, error } = await supabase.from('vault').select('data').eq('id', 1).single();
     if (error) {

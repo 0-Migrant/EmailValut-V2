@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useState, useEffect, useRef } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 import ConfirmModal from './components/modals/ConfirmModal';
@@ -243,6 +244,7 @@ function App() {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
         </Helmet>
         <AppRoutes />
+        <SpeedInsights />
       </AuthProvider>
     </Router>
   );

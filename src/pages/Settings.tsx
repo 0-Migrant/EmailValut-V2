@@ -98,8 +98,11 @@ export default function Settings() {
       try {
         const data = JSON.parse(ev.target?.result as string);
         importData(data);
-        void flushSaveToSupabase();
-        alert('✅ Data imported successfully!');
+        flushSaveToSupabase().then(() => {
+          alert('✅ Data imported and saved successfully!');
+        }).catch(() => {
+          alert('✅ Data imported! (Cloud save may be delayed — do not refresh yet.)');
+        });
       } catch {
         alert('❌ Invalid backup file.');
       }

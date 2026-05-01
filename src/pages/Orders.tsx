@@ -4,6 +4,7 @@ import { useModal } from '@/context/ModalContext';
 import { fmt, fmtDateTime, orderTotal, getPriceInfo, calcFee, statusBadgeClass, statusLabel, getLoyaltyTier } from '@/lib/utils';
 import type { OrderStatus } from '@/lib/types';
 import Icon from '@/components/Icon';
+import SelectDropdown from '@/components/SelectDropdown';
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'all',             label: 'All Orders' },
@@ -75,13 +76,19 @@ export default function Orders() {
       <div className="filter-bar orders-filter-bar">
         <input className="search-box" placeholder="Search by customer, worker..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select className="inp" value={filter} onChange={(e) => setFilter(e.target.value)}>
-          {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <select className="inp" value={dmFilter} onChange={(e) => setDmFilter(e.target.value)}>
-          <option value="">All Workers</option>
-          {deliveryMen.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
+        <SelectDropdown
+          value={filter}
+          onChange={setFilter}
+          options={STATUS_OPTIONS}
+          style={{ width: 160 }}
+        />
+        <SelectDropdown
+          value={dmFilter}
+          onChange={setDmFilter}
+          placeholder="All Workers"
+          options={deliveryMen.map((d) => ({ value: d.id, label: d.name }))}
+          style={{ width: 160 }}
+        />
       </div>
 
       <div className="card">
@@ -143,21 +150,18 @@ export default function Orders() {
                         <td>
                           {editingPm === o.id
                             ? (
-                              <select
-                                className="inp inp-sm"
+                              <SelectDropdown
+                                size="sm"
                                 autoFocus
                                 value={o.paymentMethod}
-                                onChange={(e) => {
-                                  const pm = (settings.paymentMethods ?? []).find((m) => m.label === e.target.value);
-                                  updateOrder(o.id, { paymentMethod: pm?.label ?? e.target.value, paymentDetail: pm?.detail ?? '' });
+                                onChange={(val) => {
+                                  const pm = (settings.paymentMethods ?? []).find((m) => m.label === val);
+                                  updateOrder(o.id, { paymentMethod: pm?.label ?? val, paymentDetail: pm?.detail ?? '' });
                                   setEditingPm(null);
                                 }}
                                 onBlur={() => setEditingPm(null)}
-                              >
-                                {(settings.paymentMethods ?? []).map((m) => (
-                                  <option key={m.id} value={m.label}>{m.label}</option>
-                                ))}
-                              </select>
+                                options={(settings.paymentMethods ?? []).map((m) => ({ value: m.label, label: m.label }))}
+                              />
                             )
                             : (
                               <button

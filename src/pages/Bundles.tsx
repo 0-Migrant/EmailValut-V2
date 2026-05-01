@@ -4,6 +4,7 @@ import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
 import type { BundleItem } from '@/lib/types';
+import SelectDropdown from '@/components/SelectDropdown';
 
 export default function Bundles() {
   const storeItems   = useVaultStore((s) => s.items);
@@ -104,16 +105,17 @@ export default function Bundles() {
             {/* Item picker */}
             <div className="field">
               <label>Add Item</label>
-              <select className="inp" value="" onChange={(e) => { addFormItem(e.target.value); e.target.value = ''; }}>
-                <option value="">+ Add item to bundle...</option>
-                {cats.map((cat) => (
-                  <optgroup key={cat} label={cat}>
-                    {storeItems.filter((it) => (it.category || 'Other') === cat).map((it) => (
-                      <option key={it.id} value={it.id}>{it.name} — {fmt(it.price)} $ USD</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <SelectDropdown
+                value=""
+                onChange={(val) => { if (val) addFormItem(val); }}
+                placeholder="+ Add item to bundle..."
+                options={cats.map((cat) => ({
+                  group: cat,
+                  options: storeItems.filter((it) => (it.category || 'Other') === cat).map((it) => ({
+                    value: it.id, label: `${it.name} — ${fmt(it.price)} $ USD`,
+                  })),
+                }))}
+              />
             </div>
 
             {/* Bundle items list */}

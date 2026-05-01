@@ -3,6 +3,7 @@ import { useVaultStore } from '@/lib/store';
 import { fmt, fmtDateTime, orderTotal, calcFee, inDateRange } from '@/lib/utils';
 import { uid } from '@/lib/utils';
 import Icon from '@/components/Icon';
+import SelectDropdown from '@/components/SelectDropdown';
 
 const POOL_ID     = '__pool__';
 const WALLET_ADJ  = '__wallet_adj__';
@@ -329,10 +330,13 @@ export default function Earnings() {
           {/* Filter bar */}
           <div className="card" style={{ marginBottom: 16, padding: '12px 16px' }}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <select className="inp inp-sm" value={analyticsWallet} onChange={(e) => setAnalyticsWallet(e.target.value)} style={{ width: 140 }}>
-                <option value="all">All Wallets</option>
-                {wallets.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
+              <SelectDropdown
+                size="sm"
+                value={analyticsWallet}
+                onChange={setAnalyticsWallet}
+                options={[{ value: 'all', label: 'All Wallets' }, ...wallets.map((w) => ({ value: w.id, label: w.name }))]}
+                style={{ width: 140 }}
+              />
               <input type="date" className="inp inp-sm" style={{ width: 140 }} value={analyticsFrom} onChange={(e) => setAnalyticsFrom(e.target.value)} />
               <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>to</span>
               <input type="date" className="inp inp-sm" style={{ width: 140 }} value={analyticsTo} onChange={(e) => setAnalyticsTo(e.target.value)} />
@@ -645,13 +649,13 @@ export default function Earnings() {
                   <div className="dist-step-num">0</div>
                   <div className="dist-step-body">
                     <div className="dist-step-label">Select source wallet</div>
-                    <select className="inp" style={{ width: 220 }} value={distWalletId} onChange={(e) => setDistWalletId(e.target.value)}>
-                      <option value="">— Select wallet —</option>
-                      {wallets.map((w) => {
-                        const s = walletStats(w.id);
-                        return <option key={w.id} value={w.id}>{w.name} ({fmt(s.balance)} $ available)</option>;
-                      })}
-                    </select>
+                    <SelectDropdown
+                      value={distWalletId}
+                      onChange={setDistWalletId}
+                      placeholder="— Select wallet —"
+                      options={wallets.map((w) => { const s = walletStats(w.id); return { value: w.id, label: w.name, detail: `${fmt(s.balance)} $ available` }; })}
+                      style={{ width: 220 }}
+                    />
                   </div>
                 </div>
               )}
@@ -720,15 +724,13 @@ export default function Earnings() {
                     const hasValue = computed > 0;
                     return (
                       <div key={row.id} className="dist-worker-row">
-                        <select
-                          className="inp"
-                          style={{ width: 150, flexShrink: 0 }}
+                        <SelectDropdown
                           value={row.workerId}
-                          onChange={(e) => updateDistRow(row.id, { workerId: e.target.value })}
-                        >
-                          <option value="">Select worker...</option>
-                          {deliveryMen.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                        </select>
+                          onChange={(val) => updateDistRow(row.id, { workerId: val })}
+                          placeholder="Select worker..."
+                          options={deliveryMen.map((d) => ({ value: d.id, label: d.name }))}
+                          style={{ width: 150, flexShrink: 0 }}
+                        />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                           <input
                             className="inp"
@@ -890,21 +892,28 @@ export default function Earnings() {
             <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>to</span>
             <input type="date" className="inp inp-sm" style={{ width: 140 }} value={filterTo} onChange={(e) => setFilterTo(e.target.value)} />
             {activeTab === 'all' && (
-              <select className="inp inp-sm" value={filterWorker} onChange={(e) => setFilterWorker(e.target.value)} style={{ width: 140 }}>
-                <option value="all">All Workers</option>
-                {deliveryMen.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+              <SelectDropdown
+                size="sm"
+                value={filterWorker}
+                onChange={setFilterWorker}
+                options={[{ value: 'all', label: 'All Workers' }, ...deliveryMen.map((d) => ({ value: d.id, label: d.name }))]}
+                style={{ width: 140 }}
+              />
             )}
-            <select className="inp inp-sm" value={filterType} onChange={(e) => setFilterType(e.target.value as 'all' | 'debit' | 'credit')} style={{ width: 120 }}>
-              <option value="all">All Types</option>
-              <option value="debit">Debit</option>
-              <option value="credit">Credit</option>
-            </select>
-            <select className="inp inp-sm" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as 'all' | 'pending' | 'paid')} style={{ width: 120 }}>
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-            </select>
+            <SelectDropdown
+              size="sm"
+              value={filterType}
+              onChange={(v) => setFilterType(v as 'all' | 'debit' | 'credit')}
+              options={[{ value: 'all', label: 'All Types' }, { value: 'debit', label: 'Debit' }, { value: 'credit', label: 'Credit' }]}
+              style={{ width: 120 }}
+            />
+            <SelectDropdown
+              size="sm"
+              value={filterStatus}
+              onChange={(v) => setFilterStatus(v as 'all' | 'pending' | 'paid')}
+              options={[{ value: 'all', label: 'All Status' }, { value: 'pending', label: 'Pending' }, { value: 'paid', label: 'Paid' }]}
+              style={{ width: 120 }}
+            />
             <button className="btn btn-ghost btn-sm" onClick={() => { setFilterFrom(''); setFilterTo(''); setFilterWorker('all'); setFilterType('all'); setFilterStatus('all'); }}>
               Reset Filters
             </button>

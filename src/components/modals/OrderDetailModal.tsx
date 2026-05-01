@@ -4,6 +4,7 @@ import { useVaultStore } from '@/lib/store';
 import { fmt, fmtDateTime, orderTotal, orderItemsTotal, getPriceInfo, statusBadgeClass, statusLabel } from '@/lib/utils';
 import { generateOrderPDF, generateGoldenOrderPDF, generateVIPOrderPDF } from '@/lib/pdf';
 import Icon from '@/components/Icon';
+import SelectDropdown from '@/components/SelectDropdown';
 
 
 export default function OrderDetailModal() {
@@ -146,16 +147,13 @@ export default function OrderDetailModal() {
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-hint)', marginBottom: 4 }}>Order Source</div>
             {editingSource ? (
-              <select
-                className="inp"
-                defaultValue={order.source}
+              <SelectDropdown
                 autoFocus
-                style={{ padding: '2px 6px', fontSize: 13 }}
-                onChange={(e) => { updateOrder(order.id, { source: e.target.value }); setEditingSource(false); }}
+                value={order.source ?? ''}
+                onChange={(val) => { updateOrder(order.id, { source: val }); setEditingSource(false); }}
                 onBlur={() => setEditingSource(false)}
-              >
-                {(settings.platforms ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
+                options={(settings.platforms ?? []).map((p) => ({ value: p, label: p }))}
+              />
             ) : (
               <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {order.source || '—'}

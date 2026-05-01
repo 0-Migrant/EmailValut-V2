@@ -5,6 +5,7 @@ import { statusLabel, statusBadgeClass, fmt, fmtDateTime, orderTotal } from '@/l
 import type { WorkerStatus, OrderStatus } from '@/lib/types';
 import Icon from '@/components/Icon';
 import StatusPicker from '@/components/StatusPicker';
+import SelectDropdown from '@/components/SelectDropdown';
 
 const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'waiting',          label: 'Waiting' },
@@ -193,16 +194,13 @@ export default function WorkerPortal() {
                             Delivering
                           </button>
                         )}
-                        <select
-                          className="inp inp-sm"
-                          style={{ fontSize: 12, width: 'auto' }}
+                        <SelectDropdown
+                          size="sm"
                           value={o.status}
-                          onChange={(e) => setOrderStatus(o.id, e.target.value as OrderStatus)}
-                        >
-                          {ORDER_STATUSES.map((st) => (
-                            <option key={st.value} value={st.value}>{st.label}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => setOrderStatus(o.id, val as OrderStatus)}
+                          options={ORDER_STATUSES}
+                          style={{ width: 140 }}
+                        />
                       </div>
                     </div>
 

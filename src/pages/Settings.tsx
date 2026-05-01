@@ -4,7 +4,22 @@ import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
 import type { PaymentMethodFee } from '@/lib/types';
 import Icon from '@/components/Icon';
+import SelectDropdown from '@/components/SelectDropdown';
 
+type ExportKey = 'orders' | 'credentials' | 'items' | 'categories' | 'bundles' | 'deliveryMen' | 'clients' | 'payouts' | 'settings' | 'history';
+
+const EXPORT_OPTIONS: { key: ExportKey; label: string; icon: string }[] = [
+  { key: 'orders',      label: 'Orders',      icon: 'edit' },
+  { key: 'credentials', label: 'Credentials', icon: 'pdf' },
+  { key: 'items',       label: 'Items',       icon: 'settings' },
+  { key: 'categories',  label: 'Categories',  icon: 'settings' },
+  { key: 'bundles',     label: 'Bundles',     icon: 'settings' },
+  { key: 'deliveryMen', label: 'Workers',     icon: 'settings' },
+  { key: 'clients',     label: 'Clients',     icon: 'settings' },
+  { key: 'payouts',     label: 'Payouts',     icon: 'download' },
+  { key: 'settings',    label: 'Settings',    icon: 'settings' },
+  { key: 'history',     label: 'History',     icon: 'pdf' },
+];
 
 export default function Settings() {
   const settings = useVaultStore((s) => s.settings);
@@ -21,6 +36,12 @@ export default function Settings() {
   const [newWalletName,  setNewWalletName]  = useState('');
   const [editingWallet,  setEditingWallet]  = useState<string | null>(null);
   const [editWalletName, setEditWalletName] = useState('');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportSel, setExportSel] = useState<Record<ExportKey, boolean>>({
+    orders: true, credentials: true, items: true, categories: true,
+    bundles: true, deliveryMen: true, clients: true, payouts: true,
+    settings: true, history: true,
+  });
 
   const wallets = settings.wallets ?? [];
   const nukeAll = useVaultStore((s) => s.nukeAll);
@@ -28,8 +49,21 @@ export default function Settings() {
   const state = useVaultStore((s) => s);
   const { showConfirm } = useModal();
 
-  function exportBackup() {
-    const data = JSON.stringify(state, null, 2);
+  const stateMap = state as unknown as Record<string, unknown>;
+
+  function getCount(key: ExportKey): number {
+    const v = stateMap[key];
+    if (Array.isArray(v)) return v.length;
+    if (v && typeof v === 'object') return Object.keys(v).length;
+    return 0;
+  }
+
+  function doExport() {
+    const payload: Record<string, unknown> = {};
+    for (const { key } of EXPORT_OPTIONS) {
+      if (exportSel[key]) payload[key] = stateMap[key];
+    }
+    const data = JSON.stringify(payload, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -37,7 +71,17 @@ export default function Settings() {
     a.download = `instant-play_backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setShowExportModal(false);
   }
+
+  function toggleAll(checked: boolean) {
+    const next = {} as Record<ExportKey, boolean>;
+    for (const { key } of EXPORT_OPTIONS) next[key] = checked;
+    setExportSel(next);
+  }
+
+  const allSelected = EXPORT_OPTIONS.every(({ key }) => exportSel[key]);
+  const noneSelected = EXPORT_OPTIONS.every(({ key }) => !exportSel[key]);
 
   function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -161,12 +205,12 @@ export default function Settings() {
                 <div className="setting-label">Rows Per Page</div>
                 <div className="setting-desc">Default number of rows to show in tables</div>
               </div>
-              <select className="inp" style={{ width: 80 }} value={settings.rowsperpage} onChange={(e) => updateSettings({ rowsperpage: parseInt(e.target.value) })}>
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
+              <SelectDropdown
+                value={String(settings.rowsperpage)}
+                onChange={(v) => updateSettings({ rowsperpage: parseInt(v) })}
+                options={[{ value: '10', label: '10' }, { value: '25', label: '25' }, { value: '50', label: '50' }, { value: '100', label: '100' }]}
+                style={{ width: 80 }}
+              />
             </div>
           </div>
 
@@ -250,10 +294,13 @@ export default function Settings() {
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="field-label">Payment Method</div>
-                <select className="inp" style={{ minWidth: 140 }} value={feePmLabel} onChange={(e) => setFeePmLabel(e.target.value)}>
-                  <option value="">Select method...</option>
-                  {(settings.paymentMethods ?? []).map((m) => <option key={m.id} value={m.label}>{m.label}</option>)}
-                </select>
+                <SelectDropdown
+                  value={feePmLabel}
+                  onChange={setFeePmLabel}
+                  placeholder="Select method..."
+                  options={(settings.paymentMethods ?? []).map((m) => ({ value: m.label, label: m.label }))}
+                  style={{ minWidth: 140 }}
+                />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="field-label">% Fee</div>
@@ -309,7 +356,7 @@ export default function Settings() {
             </div>
 
             <div className="data-mgmt-row" style={{ marginBottom: 12 }}>
-              <button className="btn btn-ghost" onClick={exportBackup}><Icon name="download" size={13} style={{ marginRight: 5 }} />Export JSON Backup</button>
+              <button className="btn btn-ghost" onClick={() => setShowExportModal(true)}><Icon name="download" size={13} style={{ marginRight: 5 }} />Export JSON Backup</button>
               <div style={{ position: 'relative' }}>
                 <button className="btn btn-ghost" onClick={() => document.getElementById('import-file')?.click()}><Icon name="pdf" size={13} style={{ marginRight: 5 }} />Import JSON Backup</button>
                 <input id="import-file" type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
@@ -574,6 +621,96 @@ export default function Settings() {
         </div>{/* end right column */}
 
       </div>
+
+      {/* Export Selection Modal */}
+      {showExportModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.45)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowExportModal(false); }}
+        >
+          <div style={{
+            background: 'var(--modal-bg)', borderRadius: 12, width: '100%',
+            maxWidth: 420, boxShadow: '0 8px 32px var(--shadow)',
+            border: '1px solid var(--border)', overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>Export Backup</div>
+                <div style={{ fontSize: 12, color: 'var(--text-hint)', marginTop: 2 }}>Choose which data to include</div>
+              </div>
+              <button className="btn btn-ghost btn-sm" style={{ padding: '4px 8px' }} onClick={() => setShowExportModal(false)}>
+                <Icon name="x" size={14} />
+              </button>
+            </div>
+
+            {/* Select all toggle */}
+            <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = !allSelected && !noneSelected; }}
+                  onChange={(e) => toggleAll(e.target.checked)}
+                  style={{ width: 15, height: 15, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                />
+                Select All
+              </label>
+              <span style={{ fontSize: 11, color: 'var(--text-hint)' }}>
+                {EXPORT_OPTIONS.filter(({ key }) => exportSel[key]).length} / {EXPORT_OPTIONS.length} selected
+              </span>
+            </div>
+
+            {/* Checkboxes */}
+            <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 340, overflowY: 'auto' }}>
+              {EXPORT_OPTIONS.map(({ key, label }) => {
+                const count = getCount(key);
+                return (
+                  <label
+                    key={key}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 10px', borderRadius: 8, cursor: 'pointer',
+                      background: exportSel[key] ? 'var(--bg-subtle)' : 'transparent',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={exportSel[key]}
+                      onChange={(e) => setExportSel((prev) => ({ ...prev, [key]: e.target.checked }))}
+                      style={{ width: 15, height: 15, accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }}
+                    />
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{label}</span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, minWidth: 28, textAlign: 'right',
+                      color: count > 0 ? 'var(--accent)' : 'var(--text-hint)',
+                    }}>
+                      {key === 'settings' ? '1' : count > 0 ? count : '—'}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setShowExportModal(false)}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                disabled={noneSelected}
+                onClick={doExport}
+              >
+                <Icon name="download" size={13} style={{ marginRight: 5 }} />Export Selected
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

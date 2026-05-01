@@ -3,6 +3,7 @@ import Icon from '@/components/Icon';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
+import SelectDropdown from '@/components/SelectDropdown';
 
 export default function Items() {
   const storeItems   = useVaultStore((s) => s.items);
@@ -96,10 +97,12 @@ export default function Items() {
                 <input className="inp" type="number" min={0} step={0.5} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
               </div>
               <div className="field"><label>Category</label>
-                <select className="inp" value={cat} onChange={(e) => setCat(e.target.value)}>
-                  <option value="">— Select category —</option>
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <SelectDropdown
+                  value={cat}
+                  onChange={setCat}
+                  placeholder="— Select category —"
+                  options={categories.map((c) => ({ value: c, label: c }))}
+                />
               </div>
               <div className="flex-row" style={{ marginTop:4 }}>
                 <button className="btn btn-primary" onClick={save} style={{ flex:1 }}>Save Item</button>

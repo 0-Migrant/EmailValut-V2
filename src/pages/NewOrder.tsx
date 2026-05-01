@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Icon from '@/components/Icon';
+import SelectDropdown from '@/components/SelectDropdown';
 import { useNavigate } from 'react-router-dom';
 import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
@@ -228,35 +229,34 @@ export default function NewOrder() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Worker</label>
-                <select className="inp" value={dmId} onChange={(e) => setDmId(e.target.value)}>
-                  <option value="">— Select worker —</option>
-                  {deliveryMen.map((d) => {
+                <SelectDropdown
+                  value={dmId}
+                  onChange={setDmId}
+                  placeholder="— Select worker —"
+                  options={deliveryMen.map((d) => {
                     const available = !d.frozen && d.status === 'available';
                     const statusText = d.frozen ? 'Frozen' : (d.status === 'busy' ? 'Busy' : d.status === 'offline' ? 'Offline' : null);
-                    return (
-                      <option key={d.id} value={d.id} disabled={!available}>
-                        {d.name}{statusText ? ` — ${statusText}` : ''}
-                      </option>
-                    );
+                    return { value: d.id, label: d.name, detail: statusText ?? undefined, disabled: !available };
                   })}
-                </select>
+                />
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Payment Method <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
-                <select className="inp" value={paymentMethodId} onChange={(e) => setPaymentMethodId(e.target.value)}>
-                  <option value="">— Select method —</option>
-                  {(settings.paymentMethods ?? []).map((m) => (
-                    <option key={m.id} value={m.id}>{m.label}{m.detail ? ` — ${m.detail}` : ''}</option>
-                  ))}
-                </select>
-                {paymentMethodId && (() => { const pm = (settings.paymentMethods ?? []).find((m) => m.id === paymentMethodId); return pm?.detail ? <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 3 }}>{pm.detail}</div> : null; })()}
+                <SelectDropdown
+                  value={paymentMethodId}
+                  onChange={setPaymentMethodId}
+                  placeholder="— Select method —"
+                  options={(settings.paymentMethods ?? []).map((m) => ({ value: m.id, label: m.label, detail: m.detail || undefined }))}
+                />
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Order Source <span style={{ fontSize:11, color:'var(--text-hint)' }}>(optional)</span></label>
-                <select className="inp" value={source} onChange={(e) => setSource(e.target.value)}>
-                  <option value="">— Select source —</option>
-                  {(settings.platforms ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+                <SelectDropdown
+                  value={source}
+                  onChange={setSource}
+                  placeholder="— Select source —"
+                  options={(settings.platforms ?? []).map((p) => ({ value: p, label: p }))}
+                />
               </div>
             </div>
             {/* Right: Customer, Game ID */}
@@ -455,26 +455,27 @@ export default function NewOrder() {
           </div>
 
           <div style={{ marginBottom: 8 }}>
-            <select className="inp" style={{ width:'100%' }} value="" onChange={(e) => { addItem(e.target.value); e.target.value=''; }}>
-              <option value="">+ Add item to order...</option>
-              {cats.map((cat) => (
-                <optgroup key={cat} label={cat}>
-                  {storeItems.filter((it) => (it.category || 'Other') === cat).map((it) => (
-                    <option key={it.id} value={it.id}>{it.name} — {fmt(it.price)} $ USD</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <SelectDropdown
+              value=""
+              onChange={(val) => { if (val) addItem(val); }}
+              placeholder="+ Add item to order..."
+              options={cats.map((cat) => ({
+                group: cat,
+                options: storeItems.filter((it) => (it.category || 'Other') === cat).map((it) => ({
+                  value: it.id, label: `${it.name} — ${fmt(it.price)} $ USD`,
+                })),
+              }))}
+            />
           </div>
 
           {bundles.length > 0 && (
             <div style={{ marginBottom: 12 }}>
-              <select className="inp" style={{ width:'100%' }} value="" onChange={(e) => { addBundleToOrder(e.target.value); e.target.value=''; }}>
-                <option value="">📦 Add bundle to order...</option>
-                {bundles.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name} ({b.items.length} items)</option>
-                ))}
-              </select>
+              <SelectDropdown
+                value=""
+                onChange={(val) => { if (val) addBundleToOrder(val); }}
+                placeholder="📦 Add bundle to order..."
+                options={bundles.map((b) => ({ value: b.id, label: `${b.name} (${b.items.length} items)` }))}
+              />
             </div>
           )}
 

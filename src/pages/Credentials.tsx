@@ -5,6 +5,7 @@ import { useVaultStore } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmtDate } from '@/lib/utils';
 import { generateCredentialsPDF } from '@/lib/pdf';
+import SelectDropdown from '@/components/SelectDropdown';
 
 export default function Credentials() {
   const credentials = useVaultStore((s) => s.credentials);
@@ -310,12 +311,14 @@ export default function Credentials() {
                               )}
                             </div>
                             <div className="stock-add-form">
-                              <select className="stock-inp stock-inp-name" value={newStockItemId} onChange={(e) => setNewStockItemId(e.target.value)}>
-                                <option value="">Select item...</option>
-                                {items.map((it) => (
-                                  <option key={it.id} value={it.id}>{it.name} — {it.price} $</option>
-                                ))}
-                              </select>
+                              <SelectDropdown
+                                size="sm"
+                                value={newStockItemId}
+                                onChange={setNewStockItemId}
+                                placeholder="Select item..."
+                                options={items.map((it) => ({ value: it.id, label: `${it.name} — ${it.price} $` }))}
+                                style={{ width: 160 }}
+                              />
                               <input className="stock-inp stock-inp-qty" type="number" placeholder="Qty" value={newStockQty} onChange={(e) => setNewStockQty(e.target.value)} />
                               <button className="btn btn-ghost btn-xs" onClick={() => handleAddStock(c.id)}>+ Add Stock</button>
                             </div>

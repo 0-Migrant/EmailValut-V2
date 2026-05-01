@@ -752,13 +752,15 @@ export async function flushSaveToSupabase(): Promise<void> {
   }
   const value = window.localStorage.getItem('vault_state');
   if (!value) return;
-  try {
-    const { state } = JSON.parse(value);
-    const { error } = await supabase.from('vault').upsert({ id: 1, data: state });
-    if (!error) onSaveSuccess?.();
-  } catch (err) {
-    console.warn('flushSaveToSupabase failed:', err);
-  }
+  const { state } = JSON.parse(value);
+  const { error } = await supabase.from('vault').upsert({ id: 1, data: state });
+  if (error) throw new Error(error.message);
+  // Re-apply the saved state to localStorage and the store so any mid-flight
+  // refreshFromSupabase that ran during the network request doesn't leave the
+  // store out of sync with what was just persisted.
+  window.localStorage.setItem('vault_state', value);
+  await useVaultStore.persist.rehydrate();
+  onSaveSuccess?.();
 }
 
 // Fetch the latest state from Supabase and rehydrate the store in the background.

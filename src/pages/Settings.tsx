@@ -99,9 +99,10 @@ export default function Settings() {
         const data = JSON.parse(ev.target?.result as string);
         importData(data);
         flushSaveToSupabase().then(() => {
-          alert('✅ Data imported and saved successfully!');
-        }).catch(() => {
-          alert('✅ Data imported! (Cloud save may be delayed — do not refresh yet.)');
+          alert('✅ Data imported and saved to cloud successfully!');
+        }).catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          alert(`✅ Data imported locally, but cloud save failed: ${msg}\n\nDo NOT refresh — your data is visible now. Try exporting again as backup.`);
         });
       } catch {
         alert('❌ Invalid backup file.');

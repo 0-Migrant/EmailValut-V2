@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useVaultStore } from '@/lib/store';
+import { useVaultStore, flushSaveToSupabase } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
 import type { PaymentMethodFee } from '@/lib/types';
@@ -98,6 +98,7 @@ export default function Settings() {
       try {
         const data = JSON.parse(ev.target?.result as string);
         importData(data);
+        void flushSaveToSupabase();
         alert('✅ Data imported successfully!');
       } catch {
         alert('❌ Invalid backup file.');

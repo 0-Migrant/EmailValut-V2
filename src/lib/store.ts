@@ -741,6 +741,26 @@ export const useVaultStore = create<VaultStore>()(
   ),
 );
 
+// Immediately flush any pending debounced save to Supabase.
+// Call this after critical operations (e.g. import) to avoid data loss
+// if a refreshFromSupabase fires before the 1-second debounce completes.
+export async function flushSaveToSupabase(): Promise<void> {
+  if (!isSupabaseEnabled || !supabase) return;
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+  }
+  const value = window.localStorage.getItem('vault_state');
+  if (!value) return;
+  try {
+    const { state } = JSON.parse(value);
+    const { error } = await supabase.from('vault').upsert({ id: 1, data: state });
+    if (!error) onSaveSuccess?.();
+  } catch (err) {
+    console.warn('flushSaveToSupabase failed:', err);
+  }
+}
+
 // Fetch the latest state from Supabase and rehydrate the store in the background.
 // Called once from App.tsx on mount so the initial render is never blocked.
 export async function refreshFromSupabase(): Promise<void> {

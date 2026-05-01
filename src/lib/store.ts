@@ -722,6 +722,9 @@ export const useVaultStore = create<VaultStore>()(
           clients: data.clients
             ? [...s.clients, ...data.clients.filter((x) => !s.clients.find((c) => c.id === x.id))]
             : s.clients,
+          settings: data.settings
+            ? { ...s.settings, ...data.settings }
+            : s.settings,
           history: pushHistory(s, 'add', 'Imported data from JSON backup'),
         }));
       },

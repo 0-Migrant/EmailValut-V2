@@ -8,17 +8,17 @@ import SelectDropdown from '@/components/SelectDropdown';
 
 type ExportKey = 'orders' | 'credentials' | 'items' | 'categories' | 'bundles' | 'deliveryMen' | 'clients' | 'payouts' | 'settings' | 'history';
 
-const EXPORT_OPTIONS: { key: ExportKey; label: string; icon: string }[] = [
-  { key: 'orders',      label: 'Orders',      icon: 'edit' },
-  { key: 'credentials', label: 'Credentials', icon: 'pdf' },
-  { key: 'items',       label: 'Items',       icon: 'settings' },
-  { key: 'categories',  label: 'Categories',  icon: 'settings' },
-  { key: 'bundles',     label: 'Bundles',     icon: 'settings' },
-  { key: 'deliveryMen', label: 'Workers',     icon: 'settings' },
-  { key: 'clients',     label: 'Clients',     icon: 'settings' },
-  { key: 'payouts',     label: 'Payouts',     icon: 'download' },
-  { key: 'settings',    label: 'Settings',    icon: 'settings' },
-  { key: 'history',     label: 'History',     icon: 'pdf' },
+const EXPORT_OPTIONS: { key: ExportKey; label: string; desc: string }[] = [
+  { key: 'orders',      label: 'Orders',      desc: 'All order records & statuses' },
+  { key: 'credentials', label: 'Credentials', desc: 'Accounts, emails & stock entries' },
+  { key: 'items',       label: 'Items',       desc: 'Product catalog & prices' },
+  { key: 'categories',  label: 'Categories',  desc: 'Item category list' },
+  { key: 'bundles',     label: 'Bundles',     desc: 'Item bundle definitions' },
+  { key: 'deliveryMen', label: 'Workers',     desc: 'Worker accounts & credentials' },
+  { key: 'clients',     label: 'Clients',     desc: 'Customer profiles & notes' },
+  { key: 'payouts',     label: 'Payouts',     desc: 'Worker payout & distribution history' },
+  { key: 'settings',    label: 'Settings',    desc: 'All preferences, payment methods, order platforms & wallets' },
+  { key: 'history',     label: 'History',     desc: 'Activity & audit log' },
 ];
 
 export default function Settings() {
@@ -51,11 +51,18 @@ export default function Settings() {
 
   const stateMap = state as unknown as Record<string, unknown>;
 
-  function getCount(key: ExportKey): number {
+  function getCount(key: ExportKey): string {
+    if (key === 'settings') {
+      const s = settings;
+      const parts: string[] = [];
+      if (s.paymentMethods?.length) parts.push(`${s.paymentMethods.length} method${s.paymentMethods.length !== 1 ? 's' : ''}`);
+      if (s.wallets?.length) parts.push(`${s.wallets.length} wallet${s.wallets.length !== 1 ? 's' : ''}`);
+      if (s.platforms?.length) parts.push(`${s.platforms.length} platform${s.platforms.length !== 1 ? 's' : ''}`);
+      return parts.length ? parts.join(', ') : 'All preferences';
+    }
     const v = stateMap[key];
-    if (Array.isArray(v)) return v.length;
-    if (v && typeof v === 'object') return Object.keys(v).length;
-    return 0;
+    if (Array.isArray(v)) return v.length > 0 ? String(v.length) : '';
+    return '';
   }
 
   function doExport() {
@@ -667,7 +674,7 @@ export default function Settings() {
 
             {/* Checkboxes */}
             <div style={{ padding: '8px 20px', display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 340, overflowY: 'auto' }}>
-              {EXPORT_OPTIONS.map(({ key, label }) => {
+              {EXPORT_OPTIONS.map(({ key, label, desc }) => {
                 const count = getCount(key);
                 return (
                   <label
@@ -685,13 +692,19 @@ export default function Settings() {
                       onChange={(e) => setExportSel((prev) => ({ ...prev, [key]: e.target.checked }))}
                       style={{ width: 15, height: 15, accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }}
                     />
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{label}</span>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, minWidth: 28, textAlign: 'right',
-                      color: count > 0 ? 'var(--accent)' : 'var(--text-hint)',
-                    }}>
-                      {key === 'settings' ? '1' : count > 0 ? count : '—'}
-                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-hint)', marginTop: 1 }}>{desc}</div>
+                    </div>
+                    {count && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, color: 'var(--accent)',
+                        background: 'rgba(24,95,165,0.08)', borderRadius: 6,
+                        padding: '2px 7px', whiteSpace: 'nowrap', flexShrink: 0,
+                      }}>
+                        {count}
+                      </span>
+                    )}
                   </label>
                 );
               })}

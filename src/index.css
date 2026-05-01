@@ -835,6 +835,22 @@ body.dark select.inp option {
   overflow: hidden;
   max-height: 260px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-inp) transparent;
+}
+.sd-menu::-webkit-scrollbar {
+  width: 5px;
+}
+.sd-menu::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 0 10px 10px 0;
+}
+.sd-menu::-webkit-scrollbar-thumb {
+  background: var(--border-inp);
+  border-radius: 10px;
+}
+.sd-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--text-hint);
 }
 
 .sd-option {

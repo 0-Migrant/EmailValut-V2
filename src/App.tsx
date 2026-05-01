@@ -65,15 +65,18 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isSupabaseEnabled) return;
 
+    const tabId = Math.random().toString(36).slice(2);
+
     const channel = supabase!
       .channel('vault-broadcast')
-      .on('broadcast', { event: 'data_updated' }, () => {
+      .on('broadcast', { event: 'data_updated' }, ({ payload }) => {
+        if ((payload as { tabId?: string })?.tabId === tabId) return;
         refreshFromSupabase();
       })
       .subscribe();
 
     StoreModule.onSaveSuccess = () => {
-      channel.send({ type: 'broadcast', event: 'data_updated', payload: {} });
+      channel.send({ type: 'broadcast', event: 'data_updated', payload: { tabId } });
     };
 
     return () => {

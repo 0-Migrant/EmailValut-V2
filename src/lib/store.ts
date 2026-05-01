@@ -185,6 +185,7 @@ const supabaseStorage: StateStorage = {
   },
   setItem: async (_name: string, value: string): Promise<void> => {
     if (typeof window === 'undefined') return;
+    window.localStorage.setItem('vault_state', value);
     debouncedSupabaseSave(value);
   },
   removeItem: async (): Promise<void> => {

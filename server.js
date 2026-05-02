@@ -123,9 +123,11 @@ function parseJson(val) {
   return val;
 }
 
+const NOW_DT = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+
 function toDatetime(iso) {
-  if (!iso) return null;
-  return iso.replace('T', ' ').replace('Z', '').slice(0, 19);
+  if (!iso) return NOW_DT();
+  return String(iso).replace('T', ' ').replace('Z', '').slice(0, 19);
 }
 
 app.use(cors());
@@ -295,12 +297,13 @@ app.post('/api/vault', async (req, res) => {
       );
     }
 
-    // history
+    // history — cap snapshot at 256 KB to avoid exceeding MySQL max_allowed_packet
     await conn.execute('DELETE FROM history');
     for (const r of data.history || []) {
+      const snap = r.snapshot && r.snapshot.length <= 262144 ? r.snapshot : null;
       await conn.execute(
         'INSERT INTO history (id, type, msg, time, snapshot) VALUES (?, ?, ?, ?, ?)',
-        [r.id, r.type, r.msg || '', toDatetime(r.time), r.snapshot || null],
+        [r.id, r.type || 'edit', r.msg || '', toDatetime(r.time), snap],
       );
     }
 
@@ -334,6 +337,7 @@ app.post('/api/vault', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     await conn.rollback();
+    console.error('POST /api/vault failed:', err.message);
     res.status(500).json({ error: err.message });
   } finally {
     conn.release();

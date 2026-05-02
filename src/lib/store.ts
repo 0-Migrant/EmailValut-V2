@@ -168,7 +168,7 @@ function debouncedSave(value: string) {
       // Notify other browser tabs
       saveCallbacks.onSaveSuccess?.();
     } catch (err) {
-      console.warn('Failed to save vault data, falling back to localStorage:', err);
+      console.error('[Vault] Save to server failed:', err);
       window.localStorage.setItem('vault_state', value);
     } finally {
       _saveInFlight = false;
@@ -781,7 +781,9 @@ export async function refreshFromServer(): Promise<void> {
       try {
         const { state } = JSON.parse(localRaw);
         if (state) await saveVault(state);
-      } catch { /* ignore push errors */ }
+      } catch (pushErr) {
+        console.error('[Vault] Auto-push to server failed:', pushErr);
+      }
       return;
     }
 

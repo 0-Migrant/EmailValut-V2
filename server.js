@@ -36,7 +36,12 @@ app.get('/api/vault', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT data FROM vault WHERE id = 1');
     if (rows.length === 0) return res.json({ data: null });
-    res.json({ data: rows[0].data });
+    // Parse if mysql2 returns the JSON column as a string
+    let data = rows[0].data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch { /* return as-is */ }
+    }
+    res.json({ data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -45,9 +50,10 @@ app.get('/api/vault', async (req, res) => {
 app.post('/api/vault', async (req, res) => {
   try {
     const { data } = req.body;
+    // CAST AS JSON ensures MySQL stores an object, not a string literal
     const json = JSON.stringify(data);
     await pool.execute(
-      'INSERT INTO vault (id, data) VALUES (1, ?) ON DUPLICATE KEY UPDATE data = ?, updated_at = CURRENT_TIMESTAMP',
+      'INSERT INTO vault (id, data) VALUES (1, CAST(? AS JSON)) ON DUPLICATE KEY UPDATE data = CAST(? AS JSON), updated_at = CURRENT_TIMESTAMP',
       [json, json],
     );
     res.json({ ok: true });

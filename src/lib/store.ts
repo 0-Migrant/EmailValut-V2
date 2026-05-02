@@ -764,12 +764,23 @@ export async function refreshFromServer(): Promise<void> {
   // Don't overwrite local state while a save is pending or in-flight.
   if (_saveTimer !== null || _saveInFlight) return;
   try {
-    const data = await getVault();
-    if (data) {
-      const serialized = JSON.stringify({ state: data, version: 0 });
-      window.localStorage.setItem('vault_state', serialized);
-      await useVaultStore.persist.rehydrate();
-    }
+    const data = await getVault() as Record<string, unknown> | null;
+    if (!data) return;
+
+    // If server has empty state but local has real data, skip overwrite.
+    // Local data will be pushed to server on next user action.
+    const serverIsEmpty =
+      !Array.isArray(data.deliveryMen) || (
+        (data.deliveryMen as unknown[]).length === 0 &&
+        (data.orders as unknown[])?.length === 0 &&
+        (data.items as unknown[])?.length === 0
+      );
+    const hasLocalData = Boolean(window.localStorage.getItem('vault_state'));
+    if (serverIsEmpty && hasLocalData) return;
+
+    const serialized = JSON.stringify({ state: data, version: 0 });
+    window.localStorage.setItem('vault_state', serialized);
+    await useVaultStore.persist.rehydrate();
   } catch (err) {
     console.warn('Background server refresh error:', err);
   }

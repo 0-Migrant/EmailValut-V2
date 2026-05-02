@@ -17,6 +17,7 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   waitForConnections: true,
   connectionLimit: 10,
+  charset: 'utf8mb4',
 });
 
 async function initDB() {
@@ -127,11 +128,15 @@ const NOW_DT = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 
 function toDatetime(iso) {
   if (!iso) return NOW_DT();
-  return String(iso).replace('T', ' ').replace('Z', '').slice(0, 19);
+  try {
+    return new Date(iso).toISOString().slice(0, 19).replace('T', ' ');
+  } catch {
+    return NOW_DT();
+  }
 }
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // ── GET /api/vault ─────────────────────────────────────────────────────────────
 app.get('/api/vault', async (req, res) => {
@@ -234,10 +239,12 @@ app.post('/api/vault', async (req, res) => {
   if (!data) return res.status(400).json({ error: 'Missing data' });
 
   const conn = await pool.getConnection();
+  let _table = 'unknown';
   try {
     await conn.beginTransaction();
 
     // items
+    _table = 'items';
     await conn.execute('DELETE FROM items');
     for (const r of data.items || []) {
       await conn.execute(
@@ -247,12 +254,14 @@ app.post('/api/vault', async (req, res) => {
     }
 
     // categories
+    _table = 'categories';
     await conn.execute('DELETE FROM categories');
     for (const name of data.categories || []) {
       await conn.execute('INSERT INTO categories (name) VALUES (?)', [name]);
     }
 
     // delivery_men
+    _table = 'delivery_men';
     await conn.execute('DELETE FROM delivery_men');
     for (const r of data.deliveryMen || []) {
       await conn.execute(
@@ -262,16 +271,17 @@ app.post('/api/vault', async (req, res) => {
     }
 
     // orders
+    _table = 'orders';
     await conn.execute('DELETE FROM orders');
     for (const r of data.orders || []) {
       await conn.execute(
         `INSERT INTO orders
           (id, delivery_man_id, customer_id, game_id, items, status,
            custom_price, discount_pct, payment_method, payment_detail, source, created_at)
-         VALUES (?, ?, ?, ?, CAST(? AS JSON), ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           r.id, r.deliveryManId || '', r.customerId || '', r.gameId || null,
-          JSON.stringify(r.items || []), r.status,
+          JSON.stringify(r.items || []), r.status || 'pending',
           r.customPrice ?? null, r.discountPct ?? null,
           r.paymentMethod || '', r.paymentDetail || '', r.source || '',
           toDatetime(r.createdAt),
@@ -280,24 +290,27 @@ app.post('/api/vault', async (req, res) => {
     }
 
     // bundles
+    _table = 'bundles';
     await conn.execute('DELETE FROM bundles');
     for (const r of data.bundles || []) {
       await conn.execute(
-        'INSERT INTO bundles (id, name, items) VALUES (?, ?, CAST(? AS JSON))',
+        'INSERT INTO bundles (id, name, items) VALUES (?, ?, ?)',
         [r.id, r.name, JSON.stringify(r.items || [])],
       );
     }
 
     // credentials
+    _table = 'credentials';
     await conn.execute('DELETE FROM credentials');
     for (const r of data.credentials || []) {
       await conn.execute(
-        'INSERT INTO credentials (id, name, email, pass, stocks, added) VALUES (?, ?, ?, ?, CAST(? AS JSON), ?)',
+        'INSERT INTO credentials (id, name, email, pass, stocks, added) VALUES (?, ?, ?, ?, ?, ?)',
         [r.id, r.name, r.email || '', r.pass || '', JSON.stringify(r.stocks || []), toDatetime(r.added)],
       );
     }
 
-    // history — cap snapshot at 256 KB to avoid exceeding MySQL max_allowed_packet
+    // history — cap snapshot at 256 KB to avoid large packet issues
+    _table = 'history';
     await conn.execute('DELETE FROM history');
     for (const r of data.history || []) {
       const snap = r.snapshot && r.snapshot.length <= 262144 ? r.snapshot : null;
@@ -308,23 +321,27 @@ app.post('/api/vault', async (req, res) => {
     }
 
     // settings (single row)
+    _table = 'settings';
     if (data.settings) {
+      const settingsJson = JSON.stringify(data.settings);
       await conn.execute(
-        'INSERT INTO settings (id, data) VALUES (1, CAST(? AS JSON)) ON DUPLICATE KEY UPDATE data = CAST(? AS JSON)',
-        [JSON.stringify(data.settings), JSON.stringify(data.settings)],
+        'INSERT INTO settings (id, data) VALUES (1, ?) ON DUPLICATE KEY UPDATE data = ?',
+        [settingsJson, settingsJson],
       );
     }
 
     // payouts
+    _table = 'payouts';
     await conn.execute('DELETE FROM payouts');
     for (const r of data.payouts || []) {
       await conn.execute(
         'INSERT INTO payouts (id, worker_id, wallet_id, amount, type, status, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [r.id, r.workerId || '', r.walletId || null, r.amount ?? 0, r.type, r.status || 'pending', r.note || '', toDatetime(r.createdAt)],
+        [r.id, r.workerId || '', r.walletId || null, r.amount ?? 0, r.type || 'debit', r.status || 'pending', r.note || '', toDatetime(r.createdAt)],
       );
     }
 
     // clients
+    _table = 'clients';
     await conn.execute('DELETE FROM clients');
     for (const r of data.clients || []) {
       await conn.execute(
@@ -337,8 +354,9 @@ app.post('/api/vault', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     await conn.rollback();
-    console.error('POST /api/vault failed:', err.message);
-    res.status(500).json({ error: err.message });
+    const msg = `[${_table}] ${err.message}`;
+    console.error('POST /api/vault failed:', msg);
+    res.status(500).json({ error: msg });
   } finally {
     conn.release();
   }
@@ -359,6 +377,40 @@ app.delete('/api/vault', async (req, res) => {
     res.status(500).json({ error: err.message });
   } finally {
     conn.release();
+  }
+});
+
+// ── Diagnostic: test DB write ─────────────────────────────────────────────────
+app.get('/api/test', async (req, res) => {
+  const steps = [];
+  try {
+    await pool.execute('SELECT 1');
+    steps.push('SELECT 1: ok');
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.execute('DELETE FROM items WHERE id = ?', ['__test__']);
+      steps.push('DELETE test row: ok');
+      await conn.execute(
+        'INSERT INTO items (id, name, price, category) VALUES (?, ?, ?, ?)',
+        ['__test__', 'Test Item', 1.0, 'test'],
+      );
+      steps.push('INSERT test row: ok');
+      await conn.execute('DELETE FROM items WHERE id = ?', ['__test__']);
+      steps.push('Cleanup: ok');
+      await conn.commit();
+      res.json({ ok: true, steps });
+    } catch (err) {
+      await conn.rollback();
+      steps.push(`FAILED: ${err.message}`);
+      res.json({ ok: false, steps, error: err.message });
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    steps.push(`DB connect FAILED: ${err.message}`);
+    res.json({ ok: false, steps, error: err.message });
   }
 });
 

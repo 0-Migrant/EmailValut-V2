@@ -775,8 +775,15 @@ export async function refreshFromServer(): Promise<void> {
         (data.orders as unknown[])?.length === 0 &&
         (data.items as unknown[])?.length === 0
       );
-    const hasLocalData = Boolean(window.localStorage.getItem('vault_state'));
-    if (serverIsEmpty && hasLocalData) return;
+    const localRaw = window.localStorage.getItem('vault_state');
+    if (serverIsEmpty && localRaw) {
+      // Server is empty but local has data — push local data up automatically
+      try {
+        const { state } = JSON.parse(localRaw);
+        if (state) await saveVault(state);
+      } catch { /* ignore push errors */ }
+      return;
+    }
 
     const serialized = JSON.stringify({ state: data, version: 0 });
     window.localStorage.setItem('vault_state', serialized);

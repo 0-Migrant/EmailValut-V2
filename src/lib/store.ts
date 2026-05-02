@@ -785,6 +785,9 @@ export async function refreshFromServer(): Promise<void> {
       return;
     }
 
+    // Never overwrite settings with null — keep the store's defaults
+    if (!data.settings) delete data.settings;
+
     const serialized = JSON.stringify({ state: data, version: 0 });
     window.localStorage.setItem('vault_state', serialized);
     await useVaultStore.persist.rehydrate();

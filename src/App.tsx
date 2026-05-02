@@ -172,7 +172,7 @@ function AppRoutes() {
 function PresenceManager() {
   const { session } = useAuth();
   const workerId = session?.type === 'worker' ? session.workerId : null;
-  const delayMs = useVaultStore((s) => (s.settings.workerOfflineDelay ?? 8) * 1000);
+  const delayMs = useVaultStore((s) => (s.settings?.workerOfflineDelay ?? 8) * 1000);
   const delayRef = useRef(delayMs);
   delayRef.current = delayMs;
 

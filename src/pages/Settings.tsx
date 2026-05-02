@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useVaultStore, flushSave } from '@/lib/store';
+import { deleteVault } from '@/lib/api';
 import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
 import type { PaymentMethodFee } from '@/lib/types';
@@ -110,6 +111,19 @@ export default function Settings() {
     };
     reader.readAsText(file);
     e.target.value = '';
+  }
+
+  function handleClearAll() {
+    showConfirm(
+      'Clear All Data',
+      'This will delete ALL data from the server and local storage. Import your backup file afterwards. Continue?',
+      async () => {
+        try { await deleteVault(); } catch { /* ignore */ }
+        nukeAll();
+        localStorage.removeItem('vault_state');
+        alert('✅ All data cleared. Now import your backup file.');
+      },
+    );
   }
 
   function handleReset() {
@@ -373,6 +387,14 @@ export default function Settings() {
                 <button className="btn btn-ghost" onClick={() => document.getElementById('import-file')?.click()}><Icon name="pdf" size={13} style={{ marginRight: 5 }} />Import JSON Backup</button>
                 <input id="import-file" type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
               </div>
+            </div>
+
+            <div className="danger-zone" style={{ marginBottom: 8 }}>
+              <div className="danger-zone-text">
+                <div className="danger-zone-title">Clear All Data</div>
+                <div className="danger-zone-desc">Wipes all data from the server and local storage. Use this before importing a backup.</div>
+              </div>
+              <button className="btn btn-danger" onClick={handleClearAll}><Icon name="x" size={13} style={{ marginRight: 5 }} />Clear All Data</button>
             </div>
 
             <div className="danger-zone">

@@ -5,7 +5,7 @@ import type {
   Credential, Stock, HistoryEntry, Settings, Bundle, PayoutEntry, Wallet, Client,
 } from './types';
 import { uid } from './utils';
-import { supabase, isSupabaseEnabled } from './supabase';
+import { isCloudEnabled, saveVault, deleteVault, getVault } from './api';
 
 // ─── State shape ──────────────────────────────────────────────────────────────
 
@@ -152,9 +152,9 @@ function pushHistory(
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 let _saveInFlight = false;
 let _hydrated = false;
-export let onSaveSuccess: (() => void) | null = null;
+export const saveCallbacks = { onSaveSuccess: null as (() => void) | null };
 
-function debouncedSupabaseSave(value: string) {
+function debouncedSave(value: string) {
   if (!_hydrated) return;
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async () => {
@@ -162,18 +162,13 @@ function debouncedSupabaseSave(value: string) {
     _saveInFlight = true;
     try {
       const { state } = JSON.parse(value);
-      const { error } = await supabase!.from('vault').upsert({ id: 1, data: state });
-      if (error) {
-        console.warn('Supabase setItem failed, falling back to localStorage:', error);
-        window.localStorage.setItem('vault_state', value);
-      } else {
-        // Mirror to localStorage so hard refresh has a fallback
-        window.localStorage.setItem('vault_state', value);
-        // Notify other browsers via the subscribed channel in App.tsx
-        onSaveSuccess?.();
-      }
+      await saveVault(state);
+      // Mirror to localStorage so hard refresh has a fallback
+      window.localStorage.setItem('vault_state', value);
+      // Notify other browser tabs
+      saveCallbacks.onSaveSuccess?.();
     } catch (err) {
-      console.warn('Failed to save vault data to Supabase, falling back to localStorage:', err);
+      console.warn('Failed to save vault data, falling back to localStorage:', err);
       window.localStorage.setItem('vault_state', value);
     } finally {
       _saveInFlight = false;
@@ -181,9 +176,9 @@ function debouncedSupabaseSave(value: string) {
   }, 1000);
 }
 
-const supabaseStorage: StateStorage = {
+const cloudStorage: StateStorage = {
   // Return localStorage immediately so hydration is instant, then background-sync
-  // from Supabase via refreshFromSupabase() called from App.tsx on mount.
+  // from the API via refreshFromServer() called from App.tsx on mount.
   getItem: (): string | null => {
     if (typeof window === 'undefined') return null;
     return window.localStorage.getItem('vault_state');
@@ -191,25 +186,21 @@ const supabaseStorage: StateStorage = {
   setItem: async (_name: string, value: string): Promise<void> => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem('vault_state', value);
-    debouncedSupabaseSave(value);
+    debouncedSave(value);
   },
   removeItem: async (): Promise<void> => {
     if (typeof window === 'undefined') return;
     try {
-      const { error } = await supabase!.from('vault').delete().eq('id', 1);
-      if (error) {
-        console.warn('Supabase removeItem failed, falling back to localStorage:', error);
-        window.localStorage.removeItem('vault_state');
-      }
+      await deleteVault();
     } catch (err) {
-      console.warn('Failed to remove vault data from Supabase, falling back to localStorage:', err);
-      window.localStorage.removeItem('vault_state');
+      console.warn('Failed to remove vault data:', err);
     }
+    window.localStorage.removeItem('vault_state');
   },
 };
 
 if (typeof window !== 'undefined') {
-  console.debug('[VaultStore] storage=', isSupabaseEnabled ? 'supabase' : 'localStorage');
+  console.debug('[VaultStore] storage=', isCloudEnabled ? 'api' : 'localStorage');
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -738,19 +729,19 @@ export const useVaultStore = create<VaultStore>()(
     {
       name: 'vault_state',
       storage: createJSONStorage(() => {
-        if (typeof window === 'undefined') return supabaseStorage;
-        return isSupabaseEnabled ? supabaseStorage : window.localStorage;
+        if (typeof window === 'undefined') return cloudStorage;
+        return isCloudEnabled ? cloudStorage : window.localStorage;
       }),
       onRehydrateStorage: () => () => { _hydrated = true; },
     },
   ),
 );
 
-// Immediately flush any pending debounced save to Supabase.
+// Immediately flush any pending debounced save.
 // Call this after critical operations (e.g. import) to avoid data loss
-// if a refreshFromSupabase fires before the 1-second debounce completes.
-export async function flushSaveToSupabase(): Promise<void> {
-  if (!isSupabaseEnabled || !supabase) return;
+// if a refreshFromServer fires before the 1-second debounce completes.
+export async function flushSave(): Promise<void> {
+  if (!isCloudEnabled) return;
   if (_saveTimer) {
     clearTimeout(_saveTimer);
     _saveTimer = null;
@@ -758,37 +749,28 @@ export async function flushSaveToSupabase(): Promise<void> {
   const value = window.localStorage.getItem('vault_state');
   if (!value) return;
   const { state } = JSON.parse(value);
-  const { error } = await supabase.from('vault').upsert({ id: 1, data: state });
-  if (error) throw new Error(error.message);
-  // Re-apply the saved state to localStorage and the store so any mid-flight
-  // refreshFromSupabase that ran during the network request doesn't leave the
-  // store out of sync with what was just persisted.
+  await saveVault(state);
+  // Re-apply the saved state so any mid-flight refreshFromServer doesn't
+  // leave the store out of sync with what was just persisted.
   window.localStorage.setItem('vault_state', value);
   await useVaultStore.persist.rehydrate();
-  onSaveSuccess?.();
+  saveCallbacks.onSaveSuccess?.();
 }
 
-// Fetch the latest state from Supabase and rehydrate the store in the background.
+// Fetch the latest state from the API and rehydrate the store in the background.
 // Called once from App.tsx on mount so the initial render is never blocked.
-export async function refreshFromSupabase(): Promise<void> {
-  if (!isSupabaseEnabled || !supabase) return;
-  // Don't overwrite local state while a save is pending or in-flight — refreshing
-  // with stale server data would cancel the pending save and silently lose local changes.
+export async function refreshFromServer(): Promise<void> {
+  if (!isCloudEnabled) return;
+  // Don't overwrite local state while a save is pending or in-flight.
   if (_saveTimer !== null || _saveInFlight) return;
   try {
-    const { data, error } = await supabase.from('vault').select('data').eq('id', 1).single();
-    if (error) {
-      if (error.code !== 'PGRST116') {
-        console.warn('Background Supabase refresh failed:', error);
-      }
-      return;
-    }
-    if (data?.data) {
-      const serialized = JSON.stringify({ state: data.data, version: 0 });
+    const data = await getVault();
+    if (data) {
+      const serialized = JSON.stringify({ state: data, version: 0 });
       window.localStorage.setItem('vault_state', serialized);
       await useVaultStore.persist.rehydrate();
     }
   } catch (err) {
-    console.warn('Background Supabase refresh error:', err);
+    console.warn('Background server refresh error:', err);
   }
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useVaultStore, flushSaveToSupabase } from '@/lib/store';
+import { useVaultStore, flushSave } from '@/lib/store';
 import { useModal } from '@/context/ModalContext';
 import { fmt } from '@/lib/utils';
 import type { PaymentMethodFee } from '@/lib/types';
@@ -98,7 +98,7 @@ export default function Settings() {
       try {
         const data = JSON.parse(ev.target?.result as string);
         importData(data);
-        flushSaveToSupabase().then(() => {
+        flushSave().then(() => {
           alert('✅ Data imported and saved to cloud successfully!');
         }).catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);

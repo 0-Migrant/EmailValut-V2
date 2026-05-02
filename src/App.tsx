@@ -8,9 +8,8 @@ import OrderDetailModal from './components/modals/OrderDetailModal';
 import LoyaltyModal from './components/modals/LoyaltyModal';
 import { ModalProvider } from './context/ModalContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useVaultStore, refreshFromSupabase } from './lib/store';
-import * as StoreModule from './lib/store';
-import { supabase, isSupabaseEnabled } from './lib/supabase';
+import { useVaultStore, refreshFromServer, saveCallbacks } from './lib/store';
+import { isCloudEnabled } from './lib/api';
 
 // Page imports
 import Dashboard from './pages/Dashboard';
@@ -63,25 +62,19 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pruneHistory]);
 
   useEffect(() => {
-    if (!isSupabaseEnabled) return;
-
     const tabId = Math.random().toString(36).slice(2);
+    const bc = new BroadcastChannel('vault-broadcast');
 
-    const channel = supabase!
-      .channel('vault-broadcast')
-      .on('broadcast', { event: 'data_updated' }, ({ payload }) => {
-        if ((payload as { tabId?: string })?.tabId === tabId) return;
-        refreshFromSupabase();
-      })
-      .subscribe();
-
-    StoreModule.onSaveSuccess = () => {
-      channel.send({ type: 'broadcast', event: 'data_updated', payload: { tabId } });
+    bc.onmessage = (e) => {
+      if ((e.data as { tabId?: string })?.tabId === tabId) return;
+      refreshFromServer();
     };
 
+    saveCallbacks.onSaveSuccess = () => bc.postMessage({ tabId });
+
     return () => {
-      StoreModule.onSaveSuccess = null;
-      supabase!.removeChannel(channel);
+      saveCallbacks.onSaveSuccess = null;
+      bc.close();
     };
   }, []);
 
@@ -184,44 +177,42 @@ function PresenceManager() {
   delayRef.current = delayMs;
 
   useEffect(() => {
-    if (!isSupabaseEnabled || !supabase) return;
+    if (!isCloudEnabled) return;
 
     const pending = new Map<string, ReturnType<typeof setTimeout>>();
+    const wsUrl = window.location.origin.replace(/^http/, 'ws') + '/ws';
+    const ws = new WebSocket(wsUrl);
 
-    const ch = supabase.channel('workers-online');
+    ws.onopen = () => {
+      if (workerId) ws.send(JSON.stringify({ type: 'join', workerId }));
+    };
 
-    // Worker reconnected within grace period — cancel the pending offline timer
-    ch.on('presence', { event: 'join' }, ({ newPresences }) => {
-      (newPresences as Array<{ workerId?: string }>).forEach((p) => {
-        if (p.workerId && pending.has(p.workerId)) {
-          clearTimeout(pending.get(p.workerId)!);
-          pending.delete(p.workerId);
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data as string) as { type: string; workerId?: string };
+        if (!msg.workerId) return;
+        const id = msg.workerId;
+
+        if (msg.type === 'join') {
+          // Worker reconnected within grace period — cancel pending offline timer
+          if (pending.has(id)) {
+            clearTimeout(pending.get(id)!);
+            pending.delete(id);
+          }
+        } else if (msg.type === 'leave') {
+          // Worker disconnected — start grace period before marking offline
+          if (pending.has(id)) clearTimeout(pending.get(id)!);
+          pending.set(id, setTimeout(() => {
+            useVaultStore.getState().setWorkerStatus(id, 'offline');
+            pending.delete(id);
+          }, delayRef.current));
         }
-      });
-    });
-
-    // Worker disconnected — start grace period before marking offline
-    ch.on('presence', { event: 'leave' }, ({ leftPresences }) => {
-      (leftPresences as Array<{ workerId?: string }>).forEach((p) => {
-        if (!p.workerId) return;
-        const id = p.workerId;
-        if (pending.has(id)) clearTimeout(pending.get(id)!);
-        pending.set(id, setTimeout(() => {
-          useVaultStore.getState().setWorkerStatus(id, 'offline');
-          pending.delete(id);
-        }, delayRef.current));
-      });
-    });
-
-    ch.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED' && workerId) {
-        await ch.track({ workerId });
-      }
-    });
+      } catch { /* ignore malformed messages */ }
+    };
 
     return () => {
       pending.forEach(clearTimeout);
-      supabase!.removeChannel(ch);
+      ws.close();
     };
   }, [workerId]);
 
@@ -230,7 +221,7 @@ function PresenceManager() {
 
 function App() {
   useEffect(() => {
-    refreshFromSupabase();
+    refreshFromServer();
   }, []);
 
   return (

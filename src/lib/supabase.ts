@@ -1,16 +1,2 @@
-import { createClient } from '@supabase/supabase-js';
-
-export const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
-export const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
-
-export const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: false,
-          detectSessionInUrl: false,
-        },
-      })
-    : null;
-
-export const isSupabaseEnabled = Boolean(supabase);
+// Replaced by src/lib/api.ts — kept as empty module to avoid stale imports
+export {};

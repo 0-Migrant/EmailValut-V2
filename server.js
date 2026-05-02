@@ -113,13 +113,10 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 5000;
 
-initDB()
-  .then(() => {
-    server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('Failed to initialize database:', err);
-    process.exit(1);
-  });
+// Start server first, then init DB so the process stays alive even if DB fails
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  initDB()
+    .then(() => console.log('Database ready'))
+    .catch((err) => console.error('Database init failed (check DB env vars):', err.message));
+});

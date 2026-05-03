@@ -137,7 +137,6 @@ export default function WorkerPortal() {
                     style={{
                       border: '1px solid var(--border)',
                       borderRadius: 10,
-                      overflow: 'hidden',
                       background: 'var(--bg-card)',
                     }}
                   >
@@ -210,6 +209,7 @@ export default function WorkerPortal() {
                         borderTop: '1px solid var(--border)',
                         background: 'var(--bg-subtle)',
                         padding: '10px 14px',
+                        borderRadius: '0 0 10px 10px',
                       }}>
                         <div style={{
                           fontSize: 10, fontWeight: 700, color: 'var(--text-hint)',

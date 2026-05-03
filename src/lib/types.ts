@@ -61,6 +61,8 @@ export interface Order {
   paymentDetail: string;
   source: string;
   createdAt: string;
+  feedbackText?: string;
+  feedbackMedia?: string;
 }
 
 export interface Stock {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { useVaultStore } from '@/lib/store';
 import { fmt, fmtDateTime, orderTotal, orderItemsTotal, getPriceInfo, statusBadgeClass, statusLabel } from '@/lib/utils';
@@ -25,6 +25,33 @@ export default function OrderDetailModal() {
   const [gameIdDraft,      setGameIdDraft]      = useState('');
   const [pdfTemplate,     setPdfTemplate]     = useState<'standard' | 'golden' | 'vip'>('standard');
   const [vipImage,       setVipImage]       = useState<string | null>(null);
+  const [feedbackText,   setFeedbackText]   = useState('');
+  const [uploading,      setUploading]      = useState(false);
+
+  useEffect(() => {
+    const ord = orders.find((o) => o.id === viewOrderId);
+    setFeedbackText(ord?.feedbackText || '');
+    setUploading(false);
+  }, [viewOrderId]);
+
+  async function handleFeedbackUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      if (!res.ok) throw new Error('Upload failed');
+      const { url } = await res.json() as { url: string };
+      updateOrder(viewOrderId!, { feedbackMedia: url });
+    } catch {
+      alert('❌ Upload failed. File may be too large (max 50 MB).');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
 
   function handleVipImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -208,6 +235,45 @@ export default function OrderDetailModal() {
 
         <div style={{ marginBottom: 14 }}>
           <span className={`badge ${statusBadgeClass(order.status)}`}>{statusLabel(order.status)}</span>
+        </div>
+
+        {/* Feedback */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-hint)', fontWeight: 600, marginBottom: 6 }}>Feedback (optional)</div>
+          <textarea
+            className="inp"
+            placeholder="Add notes or feedback..."
+            value={feedbackText}
+            onChange={(e) => setFeedbackText(e.target.value)}
+            onBlur={() => {
+              const val = feedbackText.trim();
+              updateOrder(order.id, { feedbackText: val || undefined });
+            }}
+            style={{ width: '100%', minHeight: 64, resize: 'vertical', marginBottom: 8, boxSizing: 'border-box' }}
+          />
+          {order.feedbackMedia && (
+            <div style={{ marginBottom: 8, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-subtle)', padding: 6 }}>
+              {/\.(mp4|webm|mov|avi|mkv)$/i.test(order.feedbackMedia) ? (
+                <video src={order.feedbackMedia} controls style={{ width: '100%', borderRadius: 6, display: 'block' }} />
+              ) : (
+                <img src={order.feedbackMedia} alt="feedback" style={{ width: '100%', borderRadius: 6, display: 'block', objectFit: 'contain', maxHeight: 260 }} />
+              )}
+              <button
+                className="btn btn-ghost btn-xs"
+                style={{ marginTop: 6, color: 'var(--danger)' }}
+                onClick={() => updateOrder(order.id, { feedbackMedia: undefined })}
+              >
+                <Icon name="x" size={11} style={{ marginRight: 4 }} />Remove media
+              </button>
+            </div>
+          )}
+          <label style={{ cursor: 'pointer' }}>
+            <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleFeedbackUpload} disabled={uploading} />
+            <span className={`btn btn-ghost btn-sm${uploading ? ' btn-disabled' : ''}`} style={{ pointerEvents: uploading ? 'none' : undefined }}>
+              <Icon name="plus" size={12} style={{ marginRight: 4 }} />
+              {uploading ? 'Uploading…' : order.feedbackMedia ? 'Change Media' : 'Attach Image / Video'}
+            </span>
+          </label>
         </div>
 
         {/* PDF Options */}

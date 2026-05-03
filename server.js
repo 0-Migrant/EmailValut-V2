@@ -2,8 +2,24 @@ const express = require('express');
 const { createServer } = require('http');
 const { WebSocketServer } = require('ws');
 const mysql = require('mysql2/promise');
+const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: uploadsDir,
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
 
 const app = express();
 const server = createServer(app);
@@ -57,9 +73,14 @@ async function initDB() {
       payment_method VARCHAR(255) DEFAULT '',
       payment_detail VARCHAR(255) DEFAULT '',
       source VARCHAR(255) DEFAULT '',
-      created_at DATETIME NOT NULL
+      created_at DATETIME NOT NULL,
+      feedback_text TEXT,
+      feedback_media VARCHAR(500)
     )
   `);
+  // Add feedback columns to existing orders tables that predate this schema
+  await pool.execute('ALTER TABLE orders ADD COLUMN feedback_text TEXT').catch(() => {});
+  await pool.execute('ALTER TABLE orders ADD COLUMN feedback_media VARCHAR(500)').catch(() => {});
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS bundles (
       id VARCHAR(36) PRIMARY KEY,
@@ -187,6 +208,8 @@ app.get('/api/vault', async (req, res) => {
           createdAt: r.created_at instanceof Date
             ? r.created_at.toISOString()
             : String(r.created_at),
+          feedbackText: r.feedback_text || undefined,
+          feedbackMedia: r.feedback_media || undefined,
         })),
         bundles: bundles.map((r) => ({
           id: r.id, name: r.name,
@@ -277,14 +300,16 @@ app.post('/api/vault', async (req, res) => {
       await conn.execute(
         `INSERT INTO orders
           (id, delivery_man_id, customer_id, game_id, items, status,
-           custom_price, discount_pct, payment_method, payment_detail, source, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           custom_price, discount_pct, payment_method, payment_detail, source, created_at,
+           feedback_text, feedback_media)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           r.id, r.deliveryManId || '', r.customerId || '', r.gameId || null,
           JSON.stringify(r.items || []), r.status || 'pending',
           r.customPrice ?? null, r.discountPct ?? null,
           r.paymentMethod || '', r.paymentDetail || '', r.source || '',
           toDatetime(r.createdAt),
+          r.feedbackText || null, r.feedbackMedia || null,
         ],
       );
     }
@@ -378,6 +403,14 @@ app.delete('/api/vault', async (req, res) => {
   } finally {
     conn.release();
   }
+});
+
+// ── File uploads ──────────────────────────────────────────────────────────────
+app.use('/uploads', express.static(uploadsDir));
+
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  res.json({ url: `/uploads/${req.file.filename}` });
 });
 
 // ── Diagnostic: test DB write ─────────────────────────────────────────────────

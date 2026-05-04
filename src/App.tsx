@@ -190,17 +190,22 @@ function PresenceManager() {
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data as string) as { type: string; workerId?: string };
+
+        // Realtime data sync — any device saving triggers a refresh for all others
+        if (msg.type === 'vault_changed') {
+          refreshFromServer();
+          return;
+        }
+
         if (!msg.workerId) return;
         const id = msg.workerId;
 
         if (msg.type === 'join') {
-          // Worker reconnected within grace period — cancel pending offline timer
           if (pending.has(id)) {
             clearTimeout(pending.get(id)!);
             pending.delete(id);
           }
         } else if (msg.type === 'leave') {
-          // Worker disconnected — start grace period before marking offline
           if (pending.has(id)) clearTimeout(pending.get(id)!);
           pending.set(id, setTimeout(() => {
             useVaultStore.getState().setWorkerStatus(id, 'offline');

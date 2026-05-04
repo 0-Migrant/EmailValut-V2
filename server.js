@@ -377,6 +377,8 @@ app.post('/api/vault', async (req, res) => {
 
     await conn.commit();
     res.json({ ok: true });
+    // Notify all connected clients to refresh their data
+    broadcast({ type: 'vault_changed' });
   } catch (err) {
     await conn.rollback();
     const msg = `[${_table}] ${err.message}`;

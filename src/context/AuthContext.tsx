@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { useVaultStore } from '@/lib/store';
+import { useVaultStore, useSaveStatusStore } from '@/lib/store';
 
 export const ADMIN_USERNAME = 'Migrant';
 export const ADMIN_PASSWORD = 'Alhoranysh8..';
@@ -34,8 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  // Store is always ready — no persist middleware, DB load happens via refreshFromServer
-  const storeReady = true;
+  // True after refreshFromServer loads DB data — prevents worker eviction on empty default state
+  const storeReady = useSaveStatusStore((s) => s.storeReady);
 
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
 

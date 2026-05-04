@@ -15,10 +15,12 @@ export type SaveStatus = 'idle' | 'pending' | 'saving' | 'error';
 interface SaveStatusState {
   saveStatus: SaveStatus;
   saveError: string | null;
+  storeReady: boolean; // true after first DB load — guards worker session eviction
 }
 export const useSaveStatusStore = create<SaveStatusState>()(() => ({
   saveStatus: 'idle' as SaveStatus,
   saveError: null,
+  storeReady: false,
 }));
 
 interface AppState {
@@ -165,7 +167,8 @@ function pushHistory(
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 let _saveInFlight = false;
 let _pendingState: AppState | null = null;
-let _refreshing = false; // true while refreshFromServer is applying server state
+let _refreshing = false;    // true while refreshFromServer is applying server state
+let _initialized = false;   // true after first DB load — blocks saves until data is loaded
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [2000, 5000, 15000];
 export const saveCallbacks = { onSaveSuccess: null as (() => void) | null };
@@ -750,9 +753,10 @@ export const useVaultStore = create<VaultStore>()(
 );
 
 // Subscribe to every state change and debounce-save to DB.
-// _refreshing guard prevents saving while we're loading from server.
+// Guards: _refreshing (loading from server) and _initialized (DB not yet loaded).
+// Without _initialized, pruneHistory() firing on mount would overwrite the DB with defaults.
 useVaultStore.subscribe((state) => {
-  if (!isCloudEnabled || _refreshing) return;
+  if (!isCloudEnabled || _refreshing || !_initialized) return;
   debouncedSave(getAppState(state));
 });
 
@@ -807,6 +811,8 @@ export async function refreshFromServer(): Promise<void> {
           useVaultStore.setState(fresh as unknown as Partial<AppState>);
           _refreshing = false;
         }
+        _initialized = true;
+        useSaveStatusStore.setState({ storeReady: true });
         return;
       }
     }
@@ -816,8 +822,13 @@ export async function refreshFromServer(): Promise<void> {
     _refreshing = true;
     useVaultStore.setState(data as unknown as Partial<AppState>);
     _refreshing = false;
+    _initialized = true;
+    useSaveStatusStore.setState({ storeReady: true });
   } catch (err) {
     _refreshing = false;
+    // Allow saves even if refresh failed — better than blocking forever
+    _initialized = true;
+    useSaveStatusStore.setState({ storeReady: true });
     console.warn('[Vault] refreshFromServer error:', err);
   }
 }

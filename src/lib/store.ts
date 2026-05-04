@@ -827,13 +827,8 @@ export async function refreshFromServer(): Promise<void> {
     const localRaw = window.localStorage.getItem('vault_state');
 
     if (serverIsEmpty && localRaw) {
-      // Server is empty but local has data — push local data up automatically
-      try {
-        const { state } = JSON.parse(localRaw);
-        if (state) await saveVault(state);
-      } catch (pushErr) {
-        console.error('[Vault] Auto-push to server failed:', pushErr);
-      }
+      // Server is empty but local has data — push via executeSave so badge + retry work
+      executeSave(localRaw, 0);
       return;
     }
 
@@ -847,8 +842,8 @@ export async function refreshFromServer(): Promise<void> {
         const serverTime = serverHistory?.[0]?.time ? new Date(serverHistory[0].time).getTime() : 0;
 
         if (localTime > serverTime) {
-          // Local is newer — push it up and skip overwriting local state
-          try { await saveVault(localState); } catch (e) { console.error('[Vault] Conflict push failed:', e); }
+          // Local is newer — push via executeSave so badge + retry work
+          executeSave(localRaw, 0);
           return;
         }
         // Server is same age or newer — fall through to apply server state

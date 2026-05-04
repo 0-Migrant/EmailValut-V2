@@ -1,11 +1,11 @@
-import { useVaultStore, useSaveStatusStore, type SaveStatus } from '@/lib/store';
+import { useVaultStore, useSaveStatusStore, flushSave, type SaveStatus } from '@/lib/store';
 import { isCloudEnabled } from '@/lib/api';
 
 const STATUS_CONFIG: Record<SaveStatus, { label: string; title: string; className: string }> = {
   idle:    { label: '✓', title: 'All changes saved',                className: 'save-badge save-badge--idle'    },
   pending: { label: '…', title: 'Save pending…',                    className: 'save-badge save-badge--pending' },
   saving:  { label: '↑', title: 'Saving to server…',                className: 'save-badge save-badge--saving'  },
-  error:   { label: '!', title: 'Save failed — data is local only', className: 'save-badge save-badge--error'  },
+  error:   { label: '!', title: 'Save failed — click to retry',     className: 'save-badge save-badge--error'   },
 };
 
 function SaveStatusBadge() {
@@ -13,11 +13,18 @@ function SaveStatusBadge() {
   const error  = useSaveStatusStore((s) => s.saveError);
   if (!isCloudEnabled) return null;
   const cfg = STATUS_CONFIG[status];
+
+  function handleClick() {
+    if (status === 'error') flushSave();
+  }
+
   return (
     <span
       className={cfg.className}
-      title={status === 'error' && error ? `Save failed: ${error}` : cfg.title}
+      title={status === 'error' && error ? `Save failed: ${error} — click to retry` : cfg.title}
       aria-label={cfg.title}
+      onClick={handleClick}
+      style={status === 'error' ? { cursor: 'pointer' } : undefined}
     >
       {cfg.label}
     </span>

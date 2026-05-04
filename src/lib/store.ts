@@ -156,6 +156,7 @@ function pushHistory(
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 let _saveInFlight = false;
 let _hydrated = false;
+let _pendingValue: string | null = null; // latest value that arrived while a save was in-flight
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [2000, 5000, 15000];
 export const saveCallbacks = { onSaveSuccess: null as (() => void) | null };
@@ -163,6 +164,13 @@ let _setStoreStatus: ((status: SaveStatus, err?: string | null) => void) | null 
 
 function debouncedSave(value: string) {
   if (!_hydrated) return;
+  // While a save is already running, just record the latest value and bail.
+  // executeSave's finally-block will pick it up and re-save when done.
+  // This prevents _setStoreStatus → setState → setItem → debouncedSave cascades.
+  if (_saveInFlight) {
+    _pendingValue = value;
+    return;
+  }
   if (_saveTimer) clearTimeout(_saveTimer);
   _setStoreStatus?.('pending');
   _saveTimer = setTimeout(() => executeSave(value, 0), 1000);
@@ -171,6 +179,7 @@ function debouncedSave(value: string) {
 async function executeSave(value: string, attempt: number): Promise<void> {
   _saveTimer = null;
   _saveInFlight = true;
+  _pendingValue = null;
   _setStoreStatus?.('saving');
   try {
     const { state } = JSON.parse(value);
@@ -191,6 +200,12 @@ async function executeSave(value: string, attempt: number): Promise<void> {
     }
   } finally {
     _saveInFlight = false;
+    // If user changed data while we were saving, kick off a fresh debounced save
+    if (_pendingValue && !_saveTimer) {
+      const pending = _pendingValue;
+      _pendingValue = null;
+      debouncedSave(pending);
+    }
   }
 }
 

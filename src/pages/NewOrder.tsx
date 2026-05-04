@@ -43,8 +43,7 @@ export default function NewOrder() {
     ? storeItems
         .filter((it) => it.name.toLowerCase().includes(itemSearch.trim().toLowerCase()))
         .sort((a, b) => a.name.localeCompare(b.name))
-        .slice(0, 10)
-    : [];
+    : [...storeItems].sort((a, b) => a.name.localeCompare(b.name));
 
   const suggestions = customerId.trim()
     ? clients

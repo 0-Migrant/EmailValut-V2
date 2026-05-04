@@ -1,11 +1,10 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
   Item, DeliveryMan, Order, OrderStatus, WorkerStatus,
   Credential, Stock, HistoryEntry, Settings, Bundle, PayoutEntry, Wallet, Client,
 } from './types';
 import { uid } from './utils';
-import { isCloudEnabled, saveVault, deleteVault, getVault } from './api';
+import { isCloudEnabled, saveVault, getVault } from './api';
 
 // ─── State shape ──────────────────────────────────────────────────────────────
 
@@ -160,12 +159,13 @@ function pushHistory(
   return list;
 }
 
-// ─── Custom Server Storage ───────────────────────────────────────────────────
+// ─── DB-only save layer ───────────────────────────────────────────────────────
+// DB is the single source of truth. localStorage is never used for persistence.
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 let _saveInFlight = false;
-let _hydrated = false;
-let _pendingValue: string | null = null; // latest value that arrived while a save was in-flight
+let _pendingState: AppState | null = null;
+let _refreshing = false; // true while refreshFromServer is applying server state
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [2000, 5000, 15000];
 export const saveCallbacks = { onSaveSuccess: null as (() => void) | null };
@@ -177,96 +177,69 @@ function _setStoreStatus(status: SaveStatus, err?: string | null) {
   });
 }
 
-function debouncedSave(value: string) {
-  if (!_hydrated) return;
-  // While a save is already running, just record the latest value and bail.
-  // executeSave's finally-block will pick it up and re-save when done.
-  // This prevents _setStoreStatus → setState → setItem → debouncedSave cascades.
+// Extract only data fields (no actions) from the full store for saving
+function getAppState(store: VaultStore): AppState {
+  const { items, categories, deliveryMen, orders, bundles, credentials,
+          history, settings, payouts, clients } = store;
+  return { items, categories, deliveryMen, orders, bundles, credentials,
+           history, settings, payouts, clients };
+}
+
+function debouncedSave(state: AppState) {
+  if (!isCloudEnabled) return;
   if (_saveInFlight) {
-    _pendingValue = value;
+    _pendingState = state;
     return;
   }
   if (_saveTimer) clearTimeout(_saveTimer);
   _setStoreStatus('pending');
-  _saveTimer = setTimeout(() => executeSave(value, 0), 1000);
+  _saveTimer = setTimeout(() => executeSave(state, 0), 1000);
 }
 
-async function executeSave(value: string, attempt: number): Promise<void> {
+async function executeSave(state: AppState, attempt: number): Promise<void> {
   _saveTimer = null;
   _saveInFlight = true;
-  _pendingValue = null;
+  _pendingState = null;
   _setStoreStatus('saving');
   try {
-    const { state } = JSON.parse(value);
     await saveVault(state);
-    window.localStorage.setItem('vault_state', value);
     _setStoreStatus('idle', null);
     saveCallbacks.onSaveSuccess?.();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[Vault] Save failed (attempt ${attempt + 1}):`, err);
-    window.localStorage.setItem('vault_state', value);
     if (attempt < MAX_RETRIES - 1) {
       const delay = RETRY_DELAYS_MS[attempt] ?? 15000;
       _setStoreStatus('pending');
-      _saveTimer = setTimeout(() => executeSave(value, attempt + 1), delay);
+      _saveTimer = setTimeout(() => executeSave(state, attempt + 1), delay);
     } else {
       _setStoreStatus('error', msg);
     }
   } finally {
     _saveInFlight = false;
-    // If user changed data while we were saving, kick off a fresh debounced save
-    if (_pendingValue && !_saveTimer) {
-      const pending = _pendingValue;
-      _pendingValue = null;
+    if (_pendingState && !_saveTimer) {
+      const pending = _pendingState;
+      _pendingState = null;
       debouncedSave(pending);
     }
   }
 }
 
-const cloudStorage: StateStorage = {
-  // Return localStorage immediately so hydration is instant, then background-sync
-  // from the API via refreshFromServer() called from App.tsx on mount.
-  getItem: (): string | null => {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem('vault_state');
-  },
-  setItem: async (_name: string, value: string): Promise<void> => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem('vault_state', value);
-    debouncedSave(value);
-  },
-  removeItem: async (): Promise<void> => {
-    if (typeof window === 'undefined') return;
-    try {
-      await deleteVault();
-    } catch (err) {
-      console.warn('Failed to remove vault data:', err);
-    }
-    window.localStorage.removeItem('vault_state');
-  },
-};
-
-if (typeof window !== 'undefined') {
-  console.debug('[VaultStore] storage=', isCloudEnabled ? 'api' : 'localStorage');
-}
-
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useVaultStore = create<VaultStore>()(
-  persist(
-    (set, get) => ({
-      // ── Initial state ──────────────────────────────────────────────────────
-      items:        DEFAULT_ITEMS,
-      categories:   DEFAULT_CATEGORIES,
-      deliveryMen:  DEFAULT_DELIVERY_MEN,
-      orders:       [],
-      bundles:      [],
-      credentials:  [],
-      history:      [],
-      settings:     DEFAULT_SETTINGS,
-      payouts:      [],
-      clients:      [],
+  (set, get) => ({
+    // ── Initial state (shown while loading from DB on first render) ───────────
+    items:        DEFAULT_ITEMS,
+    categories:   DEFAULT_CATEGORIES,
+    deliveryMen:  DEFAULT_DELIVERY_MEN,
+    orders:       [],
+    bundles:      [],
+    credentials:  [],
+    history:      [],
+    settings:     DEFAULT_SETTINGS,
+    payouts:      [],
+    clients:      [],
 
       // ── Items ──────────────────────────────────────────────────────────────
       addItem(data) {
@@ -773,99 +746,78 @@ export const useVaultStore = create<VaultStore>()(
           history: pushHistory(s, 'add', 'Imported data from JSON backup'),
         }));
       },
-    }),
-    {
-      name: 'vault_state',
-      storage: createJSONStorage(() => {
-        if (typeof window === 'undefined') return cloudStorage;
-        return isCloudEnabled ? cloudStorage : window.localStorage;
-      }),
-      onRehydrateStorage: () => () => { _hydrated = true; },
-    },
-  ),
+  }),
 );
 
-// Immediately flush any pending debounced save.
-// Call this after critical operations (e.g. import) to avoid data loss
-// if a refreshFromServer fires before the 1-second debounce completes.
+// Subscribe to every state change and debounce-save to DB.
+// _refreshing guard prevents saving while we're loading from server.
+useVaultStore.subscribe((state) => {
+  if (!isCloudEnabled || _refreshing) return;
+  debouncedSave(getAppState(state));
+});
+
+// Immediately flush any pending debounced save (e.g. after import).
 export async function flushSave(): Promise<void> {
   if (!isCloudEnabled) return;
   if (_saveTimer) {
     clearTimeout(_saveTimer);
     _saveTimer = null;
   }
-  const value = window.localStorage.getItem('vault_state');
-  if (!value) return;
-  const { state } = JSON.parse(value);
-  await saveVault(state);
-  // Re-apply the saved state so any mid-flight refreshFromServer doesn't
-  // leave the store out of sync with what was just persisted.
-  window.localStorage.setItem('vault_state', value);
-  await useVaultStore.persist.rehydrate();
-  saveCallbacks.onSaveSuccess?.();
+  if (_saveInFlight) return;
+  executeSave(getAppState(useVaultStore.getState()), 0);
 }
 
-// Fetch the latest state from the API and rehydrate the store in the background.
-// Called once from App.tsx on mount so the initial render is never blocked.
+// Load data from DB into the store. Called once on App mount.
+// One-time migration: if old localStorage data exists and DB is empty, push it up then clear it.
 export async function refreshFromServer(): Promise<void> {
   if (!isCloudEnabled) return;
-  // Don't overwrite local state while a save is pending or in-flight.
   if (_saveTimer !== null || _saveInFlight) return;
   try {
     const data = await getVault() as Record<string, unknown> | null;
     if (!data) return;
 
-    // Correct emptiness check: any non-empty collection means the server has real data
     const serverCollections = [
       data.deliveryMen, data.orders, data.items,
       data.credentials, data.clients, data.bundles, data.payouts,
     ];
-    const serverHasData = serverCollections.some(
+    const serverIsEmpty = !serverCollections.some(
       (col) => Array.isArray(col) && (col as unknown[]).length > 0,
     );
-    const serverIsEmpty = !serverHasData;
-    const localRaw = window.localStorage.getItem('vault_state');
 
-    if (serverIsEmpty && localRaw) {
-      // Server is empty but local has data — push via executeSave so badge + retry work
-      executeSave(localRaw, 0);
-      return;
-    }
-
-    // Conflict resolution: both server and local have data — prefer the more recent one
-    if (!serverIsEmpty && localRaw) {
-      try {
-        const { state: localState } = JSON.parse(localRaw) as { state: Record<string, unknown> };
-        const localHistory  = localState?.history  as Array<{ time: string }> | undefined;
-        const serverHistory = data.history          as Array<{ time: string }> | undefined;
-        const localTime  = localHistory?.[0]?.time  ? new Date(localHistory[0].time).getTime()  : 0;
-        const serverTime = serverHistory?.[0]?.time ? new Date(serverHistory[0].time).getTime() : 0;
-
-        if (localTime > serverTime) {
-          // Local is newer — push via executeSave so badge + retry work
-          executeSave(localRaw, 0);
-          return;
+    // One-time migration: old localStorage data → push to DB, then wipe localStorage
+    if (typeof window !== 'undefined') {
+      const localRaw = window.localStorage.getItem('vault_state');
+      if (localRaw) {
+        try {
+          const { state: localState } = JSON.parse(localRaw) as { state: Record<string, unknown> };
+          if (localState && serverIsEmpty) {
+            // Server empty — push local data up immediately
+            _setStoreStatus('saving');
+            await saveVault(localState);
+            _setStoreStatus('idle', null);
+          }
+        } catch { /* corrupt local data — ignore */ }
+        // Always remove old localStorage after migration attempt
+        window.localStorage.removeItem('vault_state');
+        // Re-fetch so we apply whatever is now in DB
+        const fresh = await getVault() as Record<string, unknown> | null;
+        if (fresh) {
+          if (!fresh.settings) delete fresh.settings;
+          _refreshing = true;
+          useVaultStore.setState(fresh as unknown as Partial<AppState>);
+          _refreshing = false;
         }
-        // Server is same age or newer — fall through to apply server state
-      } catch {
-        // Corrupt local JSON — fall through and apply server state
+        return;
       }
     }
 
-    // Never overwrite settings with null — keep the store's defaults
+    // Normal path: load DB data into store
     if (!data.settings) delete data.settings;
-
-    // Apply server state directly to the store so React re-renders immediately.
-    // rehydrate() can silently fail on fresh loads (no prior localStorage); setState always works.
+    _refreshing = true;
     useVaultStore.setState(data as unknown as Partial<AppState>);
-    // Also write to localStorage so the next page load is instant (best-effort — quota may exceed on mobile)
-    const serialized = JSON.stringify({ state: data, version: 0 });
-    try {
-      window.localStorage.setItem('vault_state', serialized);
-    } catch {
-      // localStorage quota exceeded — in-memory state is still correct for this session
-    }
+    _refreshing = false;
   } catch (err) {
-    console.warn('Background server refresh error:', err);
+    _refreshing = false;
+    console.warn('[Vault] refreshFromServer error:', err);
   }
 }

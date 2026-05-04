@@ -34,14 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [storeReady, setStoreReady] = useState(() => useVaultStore.persist.hasHydrated());
-
-  useEffect(() => {
-    if (storeReady) return;
-    const unsub = useVaultStore.persist.onFinishHydration(() => setStoreReady(true));
-    if (useVaultStore.persist.hasHydrated()) setStoreReady(true);
-    return unsub;
-  }, [storeReady]);
+  // Store is always ready — no persist middleware, DB load happens via refreshFromServer
+  const storeReady = true;
 
   const deliveryMen = useVaultStore((s) => s.deliveryMen);
 

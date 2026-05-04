@@ -1,4 +1,28 @@
-import { useVaultStore } from '@/lib/store';
+import { useVaultStore, type SaveStatus } from '@/lib/store';
+import { isCloudEnabled } from '@/lib/api';
+
+const STATUS_CONFIG: Record<SaveStatus, { label: string; title: string; className: string }> = {
+  idle:    { label: '✓', title: 'All changes saved',                className: 'save-badge save-badge--idle'    },
+  pending: { label: '…', title: 'Save pending…',                    className: 'save-badge save-badge--pending' },
+  saving:  { label: '↑', title: 'Saving to server…',                className: 'save-badge save-badge--saving'  },
+  error:   { label: '!', title: 'Save failed — data is local only', className: 'save-badge save-badge--error'  },
+};
+
+function SaveStatusBadge() {
+  const status = useVaultStore((s) => s._saveStatus);
+  const error  = useVaultStore((s) => s._saveError);
+  if (!isCloudEnabled) return null;
+  const cfg = STATUS_CONFIG[status];
+  return (
+    <span
+      className={cfg.className}
+      title={status === 'error' && error ? `Save failed: ${error}` : cfg.title}
+      aria-label={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
 
 export default function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const theme = useVaultStore((s) => s.settings.theme);
@@ -23,6 +47,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
         <span className="brand-name">Instant-Play</span>
       </div>
       <div className="topbar-right">
+        <SaveStatusBadge />
         <button className="theme-btn" onClick={toggleTheme} title="Toggle theme">
           {isDark ? '☀️' : '🌙'}
         </button>

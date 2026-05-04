@@ -9,6 +9,8 @@ import { isCloudEnabled, saveVault, deleteVault, getVault } from './api';
 
 // ─── State shape ──────────────────────────────────────────────────────────────
 
+export type SaveStatus = 'idle' | 'pending' | 'saving' | 'error';
+
 interface AppState {
   items: Item[];
   categories: string[];
@@ -20,6 +22,8 @@ interface AppState {
   settings: Settings;
   payouts: PayoutEntry[];
   clients: Client[];
+  _saveStatus: SaveStatus;
+  _saveError: string | null;
 }
 
 // ─── Actions shape ────────────────────────────────────────────────────────────
@@ -152,28 +156,42 @@ function pushHistory(
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 let _saveInFlight = false;
 let _hydrated = false;
+const MAX_RETRIES = 3;
+const RETRY_DELAYS_MS = [2000, 5000, 15000];
 export const saveCallbacks = { onSaveSuccess: null as (() => void) | null };
+let _setStoreStatus: ((status: SaveStatus, err?: string | null) => void) | null = null;
 
 function debouncedSave(value: string) {
   if (!_hydrated) return;
   if (_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(async () => {
-    _saveTimer = null;
-    _saveInFlight = true;
-    try {
-      const { state } = JSON.parse(value);
-      await saveVault(state);
-      // Mirror to localStorage so hard refresh has a fallback
-      window.localStorage.setItem('vault_state', value);
-      // Notify other browser tabs
-      saveCallbacks.onSaveSuccess?.();
-    } catch (err) {
-      console.error('[Vault] Save to server failed:', err);
-      window.localStorage.setItem('vault_state', value);
-    } finally {
-      _saveInFlight = false;
+  _setStoreStatus?.('pending');
+  _saveTimer = setTimeout(() => executeSave(value, 0), 1000);
+}
+
+async function executeSave(value: string, attempt: number): Promise<void> {
+  _saveTimer = null;
+  _saveInFlight = true;
+  _setStoreStatus?.('saving');
+  try {
+    const { state } = JSON.parse(value);
+    await saveVault(state);
+    window.localStorage.setItem('vault_state', value);
+    _setStoreStatus?.('idle', null);
+    saveCallbacks.onSaveSuccess?.();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[Vault] Save failed (attempt ${attempt + 1}):`, err);
+    window.localStorage.setItem('vault_state', value);
+    if (attempt < MAX_RETRIES - 1) {
+      const delay = RETRY_DELAYS_MS[attempt] ?? 15000;
+      _setStoreStatus?.('pending');
+      _saveTimer = setTimeout(() => executeSave(value, attempt + 1), delay);
+    } else {
+      _setStoreStatus?.('error', msg);
     }
-  }, 1000);
+  } finally {
+    _saveInFlight = false;
+  }
 }
 
 const cloudStorage: StateStorage = {
@@ -219,6 +237,8 @@ export const useVaultStore = create<VaultStore>()(
       settings:     DEFAULT_SETTINGS,
       payouts:      [],
       clients:      [],
+      _saveStatus:  'idle' as SaveStatus,
+      _saveError:   null,
 
       // ── Items ──────────────────────────────────────────────────────────────
       addItem(data) {
@@ -733,9 +753,22 @@ export const useVaultStore = create<VaultStore>()(
         return isCloudEnabled ? cloudStorage : window.localStorage;
       }),
       onRehydrateStorage: () => () => { _hydrated = true; },
+      partialize: (state) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { _saveStatus, _saveError, ...persisted } = state;
+        return persisted;
+      },
     },
   ),
 );
+
+// Wire status setter now that the store exists so debouncedSave can update UI state
+_setStoreStatus = (status: SaveStatus, err?: string | null) => {
+  useVaultStore.setState({
+    _saveStatus: status,
+    _saveError: err !== undefined ? err : useVaultStore.getState()._saveError,
+  });
+};
 
 // Immediately flush any pending debounced save.
 // Call this after critical operations (e.g. import) to avoid data loss
@@ -767,15 +800,17 @@ export async function refreshFromServer(): Promise<void> {
     const data = await getVault() as Record<string, unknown> | null;
     if (!data) return;
 
-    // If server has empty state but local has real data, skip overwrite.
-    // Local data will be pushed to server on next user action.
-    const serverIsEmpty =
-      !Array.isArray(data.deliveryMen) || (
-        (data.deliveryMen as unknown[]).length === 0 &&
-        (data.orders as unknown[])?.length === 0 &&
-        (data.items as unknown[])?.length === 0
-      );
+    // Correct emptiness check: any non-empty collection means the server has real data
+    const serverCollections = [
+      data.deliveryMen, data.orders, data.items,
+      data.credentials, data.clients, data.bundles, data.payouts,
+    ];
+    const serverHasData = serverCollections.some(
+      (col) => Array.isArray(col) && (col as unknown[]).length > 0,
+    );
+    const serverIsEmpty = !serverHasData;
     const localRaw = window.localStorage.getItem('vault_state');
+
     if (serverIsEmpty && localRaw) {
       // Server is empty but local has data — push local data up automatically
       try {
@@ -785,6 +820,26 @@ export async function refreshFromServer(): Promise<void> {
         console.error('[Vault] Auto-push to server failed:', pushErr);
       }
       return;
+    }
+
+    // Conflict resolution: both server and local have data — prefer the more recent one
+    if (!serverIsEmpty && localRaw) {
+      try {
+        const { state: localState } = JSON.parse(localRaw) as { state: Record<string, unknown> };
+        const localHistory  = localState?.history  as Array<{ time: string }> | undefined;
+        const serverHistory = data.history          as Array<{ time: string }> | undefined;
+        const localTime  = localHistory?.[0]?.time  ? new Date(localHistory[0].time).getTime()  : 0;
+        const serverTime = serverHistory?.[0]?.time ? new Date(serverHistory[0].time).getTime() : 0;
+
+        if (localTime > serverTime) {
+          // Local is newer — push it up and skip overwriting local state
+          try { await saveVault(localState); } catch (e) { console.error('[Vault] Conflict push failed:', e); }
+          return;
+        }
+        // Server is same age or newer — fall through to apply server state
+      } catch {
+        // Corrupt local JSON — fall through and apply server state
+      }
     }
 
     // Never overwrite settings with null — keep the store's defaults

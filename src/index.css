@@ -928,3 +928,25 @@ body.dark select.inp option {
 .sd-group + .sd-group {
   border-top: 1px solid var(--border-row);
 }
+
+/* ─── Save status badge ──────────────────────────────────────────────────── */
+.save-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: default;
+  user-select: none;
+  border: 1px solid transparent;
+  transition: background .2s, color .2s;
+}
+.save-badge--idle    { background: var(--green-bg);  color: var(--green);      border-color: var(--green-border);  }
+.save-badge--pending { background: var(--orange-bg); color: var(--orange);     border-color: var(--orange-border); }
+.save-badge--saving  { background: var(--bg-subtle); color: var(--text-muted); border-color: var(--border);
+                       animation: badge-pulse .9s ease-in-out infinite alternate; }
+.save-badge--error   { background: var(--red-bg);    color: var(--red);        border-color: var(--red-border);    }
+@keyframes badge-pulse { from { opacity: 1; } to { opacity: .45; } }

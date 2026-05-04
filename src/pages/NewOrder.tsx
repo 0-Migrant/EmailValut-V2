@@ -34,6 +34,18 @@ export default function NewOrder() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const customerRef = useRef<HTMLDivElement>(null);
 
+  // Item search typeahead
+  const [itemSearch, setItemSearch] = useState('');
+  const [showItemSuggestions, setShowItemSuggestions] = useState(false);
+  const itemSearchRef = useRef<HTMLDivElement>(null);
+
+  const itemSuggestions = itemSearch.trim()
+    ? storeItems
+        .filter((it) => it.name.toLowerCase().includes(itemSearch.trim().toLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .slice(0, 10)
+    : [];
+
   const suggestions = customerId.trim()
     ? clients
         .filter((c) => c.name.toLowerCase().startsWith(customerId.trim().toLowerCase()))
@@ -49,6 +61,9 @@ export default function NewOrder() {
     function onClickOutside(e: MouseEvent) {
       if (customerRef.current && !customerRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
+      }
+      if (itemSearchRef.current && !itemSearchRef.current.contains(e.target as Node)) {
+        setShowItemSuggestions(false);
       }
     }
     document.addEventListener('mousedown', onClickOutside);
@@ -454,18 +469,45 @@ export default function NewOrder() {
             }
           </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <SelectDropdown
-              value=""
-              onChange={(val) => { if (val) addItem(val); }}
-              placeholder="+ Add item to order..."
-              options={cats.map((cat) => ({
-                group: cat,
-                options: storeItems.filter((it) => (it.category || 'Other') === cat).map((it) => ({
-                  value: it.id, label: `${it.name} — ${fmt(it.price)} $ USD`,
-                })),
-              }))}
-            />
+          <div style={{ marginBottom: 8 }} ref={itemSearchRef}>
+            <div style={{ position: 'relative' }}>
+              <input
+                className="inp"
+                value={itemSearch}
+                onChange={(e) => { setItemSearch(e.target.value); setShowItemSuggestions(true); }}
+                onFocus={() => setShowItemSuggestions(true)}
+                placeholder="+ Add item to order..."
+                autoComplete="off"
+              />
+              {showItemSuggestions && itemSuggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
+                  backgroundColor: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                  maxHeight: 220, overflowY: 'auto', marginTop: 2,
+                }}>
+                  {itemSuggestions.map((it) => (
+                    <div
+                      key={it.id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        addItem(it.id);
+                        setItemSearch('');
+                        setShowItemSuggestions(false);
+                      }}
+                      style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 13,
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <span style={{ fontWeight: 600 }}>{it.name}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>{fmt(it.price)} $ USD</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {bundles.length > 0 && (

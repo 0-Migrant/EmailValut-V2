@@ -855,9 +855,16 @@ export async function refreshFromServer(): Promise<void> {
     // Never overwrite settings with null — keep the store's defaults
     if (!data.settings) delete data.settings;
 
+    // Apply server state directly to the store so React re-renders immediately.
+    // rehydrate() can silently fail on fresh loads (no prior localStorage); setState always works.
+    useVaultStore.setState(data as unknown as Partial<AppState>);
+    // Also write to localStorage so the next page load is instant (best-effort — quota may exceed on mobile)
     const serialized = JSON.stringify({ state: data, version: 0 });
-    window.localStorage.setItem('vault_state', serialized);
-    await useVaultStore.persist.rehydrate();
+    try {
+      window.localStorage.setItem('vault_state', serialized);
+    } catch {
+      // localStorage quota exceeded — in-memory state is still correct for this session
+    }
   } catch (err) {
     console.warn('Background server refresh error:', err);
   }

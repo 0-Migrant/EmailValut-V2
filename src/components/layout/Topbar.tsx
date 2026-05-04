@@ -1,4 +1,4 @@
-import { useVaultStore, type SaveStatus } from '@/lib/store';
+import { useVaultStore, useSaveStatusStore, type SaveStatus } from '@/lib/store';
 import { isCloudEnabled } from '@/lib/api';
 
 const STATUS_CONFIG: Record<SaveStatus, { label: string; title: string; className: string }> = {
@@ -9,8 +9,8 @@ const STATUS_CONFIG: Record<SaveStatus, { label: string; title: string; classNam
 };
 
 function SaveStatusBadge() {
-  const status = useVaultStore((s) => s._saveStatus);
-  const error  = useVaultStore((s) => s._saveError);
+  const status = useSaveStatusStore((s) => s.saveStatus);
+  const error  = useSaveStatusStore((s) => s.saveError);
   if (!isCloudEnabled) return null;
   const cfg = STATUS_CONFIG[status];
   return (

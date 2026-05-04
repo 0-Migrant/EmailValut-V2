@@ -11,6 +11,17 @@ import { isCloudEnabled, saveVault, deleteVault, getVault } from './api';
 
 export type SaveStatus = 'idle' | 'pending' | 'saving' | 'error';
 
+// Separate non-persisted store for save status so status updates never trigger
+// the cloudStorage.setItem → debouncedSave cascade in the main vault store.
+interface SaveStatusState {
+  saveStatus: SaveStatus;
+  saveError: string | null;
+}
+export const useSaveStatusStore = create<SaveStatusState>()(() => ({
+  saveStatus: 'idle' as SaveStatus,
+  saveError: null,
+}));
+
 interface AppState {
   items: Item[];
   categories: string[];
@@ -22,8 +33,6 @@ interface AppState {
   settings: Settings;
   payouts: PayoutEntry[];
   clients: Client[];
-  _saveStatus: SaveStatus;
-  _saveError: string | null;
 }
 
 // ─── Actions shape ────────────────────────────────────────────────────────────
@@ -160,7 +169,13 @@ let _pendingValue: string | null = null; // latest value that arrived while a sa
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [2000, 5000, 15000];
 export const saveCallbacks = { onSaveSuccess: null as (() => void) | null };
-let _setStoreStatus: ((status: SaveStatus, err?: string | null) => void) | null = null;
+
+function _setStoreStatus(status: SaveStatus, err?: string | null) {
+  useSaveStatusStore.setState({
+    saveStatus: status,
+    saveError: err !== undefined ? err : useSaveStatusStore.getState().saveError,
+  });
+}
 
 function debouncedSave(value: string) {
   if (!_hydrated) return;
@@ -172,7 +187,7 @@ function debouncedSave(value: string) {
     return;
   }
   if (_saveTimer) clearTimeout(_saveTimer);
-  _setStoreStatus?.('pending');
+  _setStoreStatus('pending');
   _saveTimer = setTimeout(() => executeSave(value, 0), 1000);
 }
 
@@ -180,12 +195,12 @@ async function executeSave(value: string, attempt: number): Promise<void> {
   _saveTimer = null;
   _saveInFlight = true;
   _pendingValue = null;
-  _setStoreStatus?.('saving');
+  _setStoreStatus('saving');
   try {
     const { state } = JSON.parse(value);
     await saveVault(state);
     window.localStorage.setItem('vault_state', value);
-    _setStoreStatus?.('idle', null);
+    _setStoreStatus('idle', null);
     saveCallbacks.onSaveSuccess?.();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -193,10 +208,10 @@ async function executeSave(value: string, attempt: number): Promise<void> {
     window.localStorage.setItem('vault_state', value);
     if (attempt < MAX_RETRIES - 1) {
       const delay = RETRY_DELAYS_MS[attempt] ?? 15000;
-      _setStoreStatus?.('pending');
+      _setStoreStatus('pending');
       _saveTimer = setTimeout(() => executeSave(value, attempt + 1), delay);
     } else {
-      _setStoreStatus?.('error', msg);
+      _setStoreStatus('error', msg);
     }
   } finally {
     _saveInFlight = false;
@@ -252,8 +267,6 @@ export const useVaultStore = create<VaultStore>()(
       settings:     DEFAULT_SETTINGS,
       payouts:      [],
       clients:      [],
-      _saveStatus:  'idle' as SaveStatus,
-      _saveError:   null,
 
       // ── Items ──────────────────────────────────────────────────────────────
       addItem(data) {
@@ -768,22 +781,9 @@ export const useVaultStore = create<VaultStore>()(
         return isCloudEnabled ? cloudStorage : window.localStorage;
       }),
       onRehydrateStorage: () => () => { _hydrated = true; },
-      partialize: (state) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { _saveStatus, _saveError, ...persisted } = state;
-        return persisted;
-      },
     },
   ),
 );
-
-// Wire status setter now that the store exists so debouncedSave can update UI state
-_setStoreStatus = (status: SaveStatus, err?: string | null) => {
-  useVaultStore.setState({
-    _saveStatus: status,
-    _saveError: err !== undefined ? err : useVaultStore.getState()._saveError,
-  });
-};
 
 // Immediately flush any pending debounced save.
 // Call this after critical operations (e.g. import) to avoid data loss

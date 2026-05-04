@@ -39,11 +39,9 @@ export default function NewOrder() {
   const [showItemSuggestions, setShowItemSuggestions] = useState(false);
   const itemSearchRef = useRef<HTMLDivElement>(null);
 
-  const itemSuggestions = itemSearch.trim()
-    ? storeItems
-        .filter((it) => it.name.toLowerCase().includes(itemSearch.trim().toLowerCase()))
-        .sort((a, b) => a.name.localeCompare(b.name))
-    : [...storeItems].sort((a, b) => a.name.localeCompare(b.name));
+  const itemSuggestionsFiltered = itemSearch.trim()
+    ? storeItems.filter((it) => it.name.toLowerCase().includes(itemSearch.trim().toLowerCase()))
+    : storeItems;
 
   const suggestions = customerId.trim()
     ? clients
@@ -478,30 +476,41 @@ export default function NewOrder() {
                 placeholder="+ Add item to order..."
                 autoComplete="off"
               />
-              {showItemSuggestions && itemSuggestions.length > 0 && (
+              {showItemSuggestions && itemSuggestionsFiltered.length > 0 && (
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
                   backgroundColor: 'var(--bg-card)',
                   border: '1px solid var(--border)',
                   borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-                  maxHeight: 220, overflowY: 'auto', marginTop: 2,
+                  maxHeight: 260, overflowY: 'auto', marginTop: 2,
                 }}>
-                  {itemSuggestions.map((it) => (
-                    <div
-                      key={it.id}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        addItem(it.id);
-                        setItemSearch('');
-                        setShowItemSuggestions(false);
-                      }}
-                      style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 13,
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      <span style={{ fontWeight: 600 }}>{it.name}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>{fmt(it.price)} $ USD</span>
+                  {cats.filter((cat) => itemSuggestionsFiltered.some((it) => (it.category || 'Other') === cat)).map((cat) => (
+                    <div key={cat}>
+                      <div style={{ padding: '5px 12px 3px', fontSize: 10, fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-hint)',
+                        borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                        {cat}
+                      </div>
+                      {itemSuggestionsFiltered
+                        .filter((it) => (it.category || 'Other') === cat)
+                        .map((it) => (
+                          <div
+                            key={it.id}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              addItem(it.id);
+                              setItemSearch('');
+                              setShowItemSuggestions(false);
+                            }}
+                            style={{ padding: '8px 12px 8px 18px', cursor: 'pointer', fontSize: 13,
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                          >
+                            <span style={{ fontWeight: 600 }}>{it.name}</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-hint)' }}>{fmt(it.price)} $ USD</span>
+                          </div>
+                        ))}
                     </div>
                   ))}
                 </div>
